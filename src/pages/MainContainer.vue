@@ -1,6 +1,6 @@
 <template>
     <div class="main-container">
-        <GnbContainer />
+        <GnbContainer @upload="openUploadPopup" />
 
         <div class="main-body">
             <LnbContainer />
@@ -149,6 +149,8 @@
                     <p>파일을 업로드하거나 폴더를 생성해보세요</p>
                 </div>
             </main>
+
+            <UploadPopup v-if="isUploadPopupVisible" @close="closeUploadPopup" @upload="handleUpload" />
         </div>
     </div>
 </template>
@@ -157,9 +159,12 @@
 import { ref } from 'vue'
 import GnbContainer from './GnbContainer.vue'
 import LnbContainer from './LnbContainer.vue'
+import UploadPopup from './UploadPopup.vue'
+
 
 const viewMode = ref<'grid' | 'list'>('grid')
 const sortBy = ref('name')
+const isUploadPopupVisible = ref(false)
 
 const files = ref([
     { id: 1, name: '프로젝트 문서', type: 'folder', size: '—', date: '2024-12-15' },
@@ -187,6 +192,20 @@ const openFile = (file: any) => {
 const openFileMenu = (file: any) => {
     console.log('파일 메뉴:', file)
     // TODO: 컨텍스트 메뉴 표시
+}
+
+const openUploadPopup = () => {
+    isUploadPopupVisible.value = true
+}
+
+const closeUploadPopup = () => {
+    isUploadPopupVisible.value = false
+}
+
+const handleUpload = (uploadedFiles: File[]) => {
+    console.log('업로드된 파일:', uploadedFiles)
+    // TODO: 업로드된 파일 처리 및 파일 목록 갱신
+    closeUploadPopup()
 }
 </script>
 

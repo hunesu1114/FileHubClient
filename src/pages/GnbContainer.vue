@@ -71,6 +71,10 @@
 import { ref, computed } from 'vue'
 import { useThemeStore } from '@/stores/theme'
 
+const emit = defineEmits<{
+    upload: []
+}>()
+
 const themeStore = useThemeStore()
 const isDark = computed(() => themeStore.isDark)
 
@@ -89,8 +93,7 @@ const handleSearch = () => {
 }
 
 const handleUpload = () => {
-    console.log('파일 업로드')
-    // TODO: 파일 업로드 다이얼로그 열기
+    emit('upload')
 }
 
 const toggleNotifications = () => {
