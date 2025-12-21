@@ -76,18 +76,18 @@ const router = createRouter({
 })
 
 // 라우터 가드 - 인증 체크
-router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
+// router.beforeEach((to, from, next) => {
+//   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
 
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    // 인증이 필요한 페이지인데 로그인하지 않은 경우
-    next('/login')
-  } else if (to.path === '/login' && isAuthenticated) {
-    // 이미 로그인한 상태에서 로그인 페이지 접근 시
-    next('/')
-  } else {
-    next()
-  }
-})
+//   if (to.meta.requiresAuth && !isAuthenticated) {
+//     // 인증이 필요한 페이지인데 로그인하지 않은 경우
+//     next('/login')
+//   } else if (to.path === '/login' && isAuthenticated) {
+//     // 이미 로그인한 상태에서 로그인 페이지 접근 시
+//     next('/')
+//   } else {
+//     next()
+//   }
+// })
 
 export default router
