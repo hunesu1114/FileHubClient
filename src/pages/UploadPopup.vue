@@ -100,7 +100,8 @@
             <!-- 푸터 -->
             <div class="popup-footer">
                 <button class="cancel-button" @click="closePopup">취소</button>
-                <button class="upload-button" @click="startUpload" :disabled="selectedFiles.length === 0 || isUploading">
+                <button class="upload-button" @click="startUpload"
+                    :disabled="selectedFiles.length === 0 || isUploading">
                     {{ isUploading ? '업로드 중...' : '업로드 시작' }}
                 </button>
             </div>
@@ -254,7 +255,7 @@ const uploadFile = async (file: UploadFile): Promise<void> => {
         await axios.post(uploadUrl, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
-                // Authorization: `Bearer ${token}`, // 필요시 주석 해제
+                Authorization: `Bearer ${localStorage.getItem('jwt')}`, // 필요시 주석 해제
             },
             timeout: API_CONFIG.TIMEOUT,
             onUploadProgress: (progressEvent) => {
