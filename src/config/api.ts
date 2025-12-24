@@ -6,6 +6,7 @@ export const API_CONFIG = {
     FILES: '/files',
     FOLDERS: '/folders',
     GET_OAUTH_PARAM: '/getOAuthParam',
+    API_FILES_GETDATA: '/files/getData',
   },
   TIMEOUT: 30000, // 30초
 } as const

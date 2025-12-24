@@ -74,6 +74,10 @@ const storagePercentage = computed(() => {
     return (used / total) * 100
 })
 
+const emit = defineEmits<{
+    create: []
+}>()
+
 const quickAccessItems = ref([
     {
         id: 1,
@@ -113,10 +117,10 @@ const quickAccessItems = ref([
 ])
 
 const folders = ref([
-    { id: 101, name: '프로젝트', path: '/folder/projects' },
-    { id: 102, name: '문서', path: '/folder/documents' },
-    { id: 103, name: '이미지', path: '/folder/images' },
-    { id: 104, name: '비디오', path: '/folder/videos' }
+    // { id: 101, name: '프로젝트', path: '/folder/projects' },
+    // { id: 102, name: '문서', path: '/folder/documents' },
+    // { id: 103, name: '이미지', path: '/folder/images' },
+    // { id: 104, name: '비디오', path: '/folder/videos' }
 ])
 
 const toggleCollapse = () => {
@@ -124,9 +128,10 @@ const toggleCollapse = () => {
 }
 
 const createNewFolder = () => {
-    console.log('새 폴더 생성')
-    // TODO: 새 폴더 생성 다이얼로그
+    emit('create')
 }
+
+
 
 const navigateTo = (path: string) => {
     currentPath.value = path

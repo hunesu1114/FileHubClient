@@ -1,5 +1,7 @@
 <template>
     <div class="main-container">
+        <!-- TODO : LNB 주석 풀면 제대로 렌더링 안됨.. 해결해야함 -->
+        <!-- <LnbContainer @create="openFolderCreatePopup" /> -->
         <GnbContainer @upload="openUploadPopup" />
 
         <div class="main-body">
@@ -151,31 +153,42 @@
             </main>
 
             <UploadPopup v-if="isUploadPopupVisible" @close="closeUploadPopup" @upload="handleUpload" />
+            <FolderCreatePopup v-if="isFolderCreatePopupVisible" @close="closeFolderCreatePopup"
+                @create="createFolder" />
+            <ConfirmPopup v-if="isConfirmPopupVisible" @confirm="handleConfirm" @cancel="handleCancel"
+                :title="confirmTitle" :type="'success'" :showCancelButton="false" :message="confirmMsg" />
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import GnbContainer from './GnbContainer.vue'
 import LnbContainer from './LnbContainer.vue'
 import UploadPopup from './UploadPopup.vue'
-
+import ConfirmPopup from '@/component/ConfirmPopup.vue'
+import axios from 'axios'
+import { API_CONFIG, getApiUrl } from '@/config/api'
+import FolderCreatePopup from './FolderCreatePopup.vue'
 
 const viewMode = ref<'grid' | 'list'>('grid')
 const sortBy = ref('name')
 const isUploadPopupVisible = ref(false)
-
+const isConfirmPopupVisible = ref()
+const confirmTitle = ref<string>('')
+const confirmMsg = ref<string>('')
 const files = ref([
-    { id: 1, name: '프로젝트 문서', type: 'folder', size: '—', date: '2024-12-15' },
-    { id: 2, name: 'design-mockup.fig', type: 'file', size: '2.4 MB', date: '2024-12-18' },
-    { id: 3, name: 'presentation.pdf', type: 'file', size: '5.1 MB', date: '2024-12-19' },
-    { id: 4, name: 'image-gallery', type: 'folder', size: '—', date: '2024-12-10' },
-    { id: 5, name: 'screenshot.png', type: 'image', size: '1.2 MB', date: '2024-12-19' },
-    { id: 6, name: 'budget-2024.xlsx', type: 'file', size: '856 KB', date: '2024-12-17' },
-    { id: 7, name: 'meeting-notes.docx', type: 'file', size: '124 KB', date: '2024-12-18' },
-    { id: 8, name: '백업', type: 'folder', size: '—', date: '2024-12-01' }
+    // { id: 1, name: '프로젝트 문서', type: 'folder', size: '—', date: '2024-12-15' },
+    // { id: 2, name: 'design-mockup.fig', type: 'file', size: '2.4 MB', date: '2024-12-18' },
+    // { id: 3, name: 'presentation.pdf', type: 'file', size: '5.1 MB', date: '2024-12-19' },
+    // { id: 4, name: 'image-gallery', type: 'folder', size: '—', date: '2024-12-10' },
+    // { id: 5, name: 'screenshot.png', type: 'image', size: '1.2 MB', date: '2024-12-19' },
+    // { id: 6, name: 'budget-2024.xlsx', type: 'file', size: '856 KB', date: '2024-12-17' },
+    // { id: 7, name: 'meeting-notes.docx', type: 'file', size: '124 KB', date: '2024-12-18' },
+    // { id: 8, name: '백업', type: 'folder', size: '—', date: '2024-12-01' }
 ])
+
+const folders = ref([])
 
 const fileCount = ref(files.value.length)
 
@@ -194,6 +207,16 @@ const openFileMenu = (file: any) => {
     // TODO: 컨텍스트 메뉴 표시
 }
 
+const handleConfirm = () => {
+    console.log('확인됨')
+    isConfirmPopupVisible.value = false
+}
+
+const handleCancel = () => {
+    console.log('취소됨')
+    isConfirmPopupVisible.value = false
+}
+
 const openUploadPopup = () => {
     isUploadPopupVisible.value = true
 }
@@ -205,8 +228,50 @@ const closeUploadPopup = () => {
 const handleUpload = (uploadedFiles: File[]) => {
     console.log('업로드된 파일:', uploadedFiles)
     // TODO: 업로드된 파일 처리 및 파일 목록 갱신
+    confirmMsg.value = `${uploadedFiles.length}개의 파일이 업로드되었습니다.`
+    confirmTitle.value = '업로드 성공'
+    isConfirmPopupVisible.value = true
     closeUploadPopup()
 }
+
+const isFolderCreatePopupVisible = ref(false)
+
+const openFolderCreatePopup = () => {
+    isFolderCreatePopupVisible.value = true
+}
+
+const closeFolderCreatePopup = () => {
+    isFolderCreatePopupVisible.value = false
+}
+
+const createFolder = (folderName: string) => {
+    console.log('새 폴더 생성:', folderName)
+    // TODO: 새 폴더 생성 처리 및 폴더 목록 갱신
+    closeFolderCreatePopup()
+}
+
+const getObjectsData = async () => {
+    console.log('jwt token : ', localStorage.getItem('jwt'))
+    try {
+        const response = await axios.get(
+            getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_GETDATA),
+            {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('jwt')}`, // 필요시 주석 해제
+                },
+                timeout: API_CONFIG.TIMEOUT
+            }
+        )
+        console.log('파일 데이터:', response.data)
+    } catch (error) {
+        console.error('파일 데이터 가져오기 실패:', error)
+    }
+}
+
+onMounted(async () => {
+    await getObjectsData()
+})
+
 </script>
 
 <style scoped>
