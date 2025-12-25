@@ -186,6 +186,12 @@ const files = ref([
     // { id: 7, name: 'meeting-notes.docx', type: 'file', size: '124 KB', date: '2024-12-18' },
     // { id: 8, name: '백업', type: 'folder', size: '—', date: '2024-12-01' }
 ])
+const currentFolder = ref({
+    id: 0,
+    folderName: '',
+    parentFolderId: 0,
+    hierarchy: ''
+})
 
 const folders = ref([])
 
@@ -246,6 +252,29 @@ const closeFolderCreatePopup = () => {
 const createFolder = (folderName: string) => {
     console.log('새 폴더 생성:', folderName)
     // TODO: 새 폴더 생성 처리 및 폴더 목록 갱신
+    axios.post(
+        getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_CREATE),
+        {
+            folderName: folderName,
+            parentFolderId: currentFolder.value.parentFolderId
+        },
+        {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('jwt')}`, // 필요시 주석 해제
+            },
+            timeout: API_CONFIG.TIMEOUT
+        }
+    ).then(response => {
+        console.log('폴더 생성 응답:', response.data)
+        confirmMsg.value = `폴더 "${folderName}"이(가) 생성되었습니다.`
+        confirmTitle.value = '폴더 생성 성공'
+        isConfirmPopupVisible.value = true
+    }).catch(error => {
+        console.error('폴더 생성 실패:', error)
+        confirmMsg.value = `폴더 생성에 실패했습니다: ${error.message}`
+        confirmTitle.value = '폴더 생성 실패'
+        isConfirmPopupVisible.value = true
+    })
     closeFolderCreatePopup()
 }
 
@@ -267,8 +296,27 @@ const getObjectsData = async () => {
     }
 }
 
+// TODO : 폴더 가져올때 query param으로 가져올건지 url path로 가져올건지 결정해야함
+const getFolderData = async () => {
+    // try {
+    //     const response = await axios.get(
+    //         getApiUrl(API_CONFIG.ENDPOINTS.FOLDERS),
+    //         {
+    //             headers: {
+    //                 Authorization: `Bearer ${localStorage.getItem('jwt')}`, // 필요시 주석 해제
+    //             },
+    //             timeout: API_CONFIG.TIMEOUT
+    //         }
+    //     )
+    //     console.log('폴더 데이터:', response.data)
+    // } catch (error) {
+    //     console.error('폴더 데이터 가져오기 실패:', error)
+    // }
+}
+
 onMounted(async () => {
     await getObjectsData()
+    await getFolderData()
 })
 
 </script>
