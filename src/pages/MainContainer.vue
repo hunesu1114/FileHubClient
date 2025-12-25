@@ -1,11 +1,10 @@
 <template>
     <div class="main-container">
-        <!-- TODO : LNB 주석 풀면 제대로 렌더링 안됨.. 해결해야함 -->
-        <!-- <LnbContainer @create="openFolderCreatePopup" /> -->
+
         <GnbContainer @upload="openUploadPopup" />
 
         <div class="main-body">
-            <LnbContainer />
+            <LnbContainer @create="openFolderCreatePopup" />
 
             <main class="content-area">
                 <!-- 헤더 영역 -->
