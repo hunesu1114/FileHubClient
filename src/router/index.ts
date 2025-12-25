@@ -12,7 +12,7 @@ const router = createRouter({
       },
     },
     {
-      path: '/',
+      path: '/bucket',
       name: 'main',
       component: () => import('@/pages/MainContainer.vue'),
       meta: {

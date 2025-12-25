@@ -15,7 +15,7 @@
                 </div>
 
                 <!-- 로그인 폼 -->
-                <form @submit.prevent="handleLogin" class="login-form">
+                <form class="login-form">
                     <div class="form-group">
                         <label for="email">이메일</label>
                         <input id="email" v-model="email" type="email" placeholder="이메일을 입력하세요" required />
@@ -34,7 +34,7 @@
                         <a href="#" class="forgot-password">비밀번호 찾기</a>
                     </div>
 
-                    <button type="submit" class="login-button">
+                    <button type="button" class="login-button">
                         로그인
                     </button>
 
@@ -45,6 +45,9 @@
                     <button type="button" class="signup-button" @click="goToSignup">
                         회원가입
                     </button>
+                    <button type="button" class="kakao-button" @click="kakaoLogin">
+                        Kakao 로그인
+                    </button>
                 </form>
             </div>
         </div>
@@ -52,8 +55,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
+import { getApiUrl, API_CONFIG } from '@/config/api'
 
 const router = useRouter()
 
@@ -61,21 +66,31 @@ const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)
 
-const handleLogin = () => {
-    console.log('로그인:', { email: email.value, password: password.value })
-    // TODO: 로그인 API 호출
-
-    // 인증 정보 저장
-    localStorage.setItem('isAuthenticated', 'true')
-
-    // 메인 페이지로 이동
-    router.push('/')
+const kakaoLogin = async () => {
+    console.log(API_CONFIG.ENDPOINTS.GET_OAUTH_PARAM)
+    try {
+        const { data } = await axios.get(getApiUrl(API_CONFIG.ENDPOINTS.GET_OAUTH_PARAM))
+        const restapikey = data.restapikey
+        const redirectUri = data.redirectUri
+        location.href = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${restapikey}&redirect_uri=${redirectUri}`
+    } catch (error) {
+        console.error('OAuth 파라미터 조회 실패:', error)
+    }
 }
 
 const goToSignup = () => {
     console.log('회원가입 페이지로 이동')
     // TODO: 회원가입 페이지로 라우팅
 }
+
+onMounted(async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token");
+    if (token) {
+        localStorage.setItem('jwt', token);
+        router.push('/bucket');
+    }
+});
 </script>
 
 <style scoped>
@@ -230,15 +245,21 @@ const goToSignup = () => {
     padding: 14px;
     font-size: 16px;
     font-weight: 600;
-    color: white;
-    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    color: #ffffff !important;
+    background: #4c6ef5;
+    border: 2px solid #4c6ef5;
     border-radius: 8px;
     margin-top: 8px;
-    box-shadow: 0 4px 12px rgba(76, 110, 245, 0.3);
+    transition: all 0.3s ease;
+    cursor: pointer;
 }
 
 .login-button:hover {
-    box-shadow: 0 6px 16px rgba(76, 110, 245, 0.4);
+    background: #364fc7;
+    color: #ffffff !important;
+    border-color: #364fc7;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 110, 245, 0.3);
 }
 
 .divider {
@@ -270,11 +291,33 @@ const goToSignup = () => {
     background: transparent;
     border: 2px solid var(--accent-primary);
     border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
 }
 
 .signup-button:hover {
-    background: var(--accent-primary);
-    color: white;
+    background: rgba(76, 110, 245, 0.1);
+    color: var(--accent-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 110, 245, 0.2);
+}
+
+.kakao-button {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #3c1e1e;
+    background: #FEE500;
+    border: 2px solid #FEE500;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.kakao-button:hover {
+    background: #fdd835;
+    border-color: #fdd835;
+    color: #3c1e1e;
 }
 
 @media (max-width: 480px) {
