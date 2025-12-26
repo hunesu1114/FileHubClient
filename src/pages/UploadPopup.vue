@@ -122,6 +122,14 @@ interface UploadFile {
     progress: number
 }
 
+interface Props {
+    folderId?: number
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    folderId: 0
+})
+
 const emit = defineEmits<{
     close: []
     upload: [files: File[]]
@@ -246,6 +254,7 @@ const uploadFile = async (file: UploadFile): Promise<void> => {
     try {
         const formData = new FormData()
         formData.append('file', file.file)
+        formData.append('folderId', String(props.folderId))
 
         const uploadUrl = getApiUrl(API_CONFIG.ENDPOINTS.UPLOAD)
 

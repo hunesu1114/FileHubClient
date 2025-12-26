@@ -61,6 +61,7 @@
 
                 <!-- 파일 그리드 뷰 -->
                 <div v-if="viewMode === 'grid'" class="file-grid">
+                    <!-- 폴더 -->
                     <div v-for="folder in currentFolder.childFolders" :key="folder.id" class="file-card"
                         @click="selectFile(folder)" @dblclick="openFile(folder)">
                         <div class="file-thumbnail">
@@ -85,8 +86,7 @@
                         </button>
                     </div>
 
-
-
+                    <!-- 파일 -->
                     <div v-for="file in files" :key="file.id" class="file-card" @click="selectFile(file)"
                         @dblclick="openFile(file)">
                         <div class="file-thumbnail">
@@ -113,8 +113,8 @@
                         </div>
 
                         <div class="file-info">
-                            <h3 class="file-name">{{ file.name }}</h3>
-                            <p class="file-meta">{{ file.size }} • {{ file.date }}</p>
+                            <h3 class="file-name">{{ file.originalFileName }}</h3>
+                            <p class="file-meta">{{ file.size }} KB • {{ file.createdAt.split(' ')[0] }}</p>
                         </div>
 
                         <button class="file-menu-button" @click.stop="openFileMenu(file)">
@@ -177,7 +177,8 @@
                 </div>
             </main>
 
-            <UploadPopup v-if="isUploadPopupVisible" @close="closeUploadPopup" @upload="handleUpload" />
+            <UploadPopup v-if="isUploadPopupVisible" :folder-id="currentFolder.id" @close="closeUploadPopup"
+                @upload="handleUpload" />
             <FolderCreatePopup v-if="isFolderCreatePopupVisible" @close="closeFolderCreatePopup"
                 @create="createFolder" />
             <ConfirmPopup v-if="isConfirmPopupVisible" @confirm="handleConfirm" @cancel="handleCancel"
@@ -317,7 +318,7 @@ const createFolder = (folderName: string) => {
 const getObjectsData = async () => {
     console.log('jwt token : ', localStorage.getItem('jwt'))
     try {
-        const response = await axios.get(
+        await axios.get(
             getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_GETDATA),
             {
                 headers: {
@@ -325,8 +326,10 @@ const getObjectsData = async () => {
                 },
                 timeout: API_CONFIG.TIMEOUT
             }
-        )
-        console.log('파일 데이터:', response.data)
+        ).then(res => {
+            files.value = res.data.data
+            fileCount.value = files.value.length
+        })
     } catch (error) {
         console.error('파일 데이터 가져오기 실패:', error)
     }
