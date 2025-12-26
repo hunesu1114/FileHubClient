@@ -74,7 +74,7 @@
 
                         <div class="file-info">
                             <h3 class="file-name">{{ folder.folderName }}</h3>
-                            <p class="file-meta">{{ folder.size }} • {{ folder.createdAt }}</p>
+                            <p class="file-meta">폴더 • {{ folder.createdAt.split(' ')[0] }}</p>
                         </div>
 
                         <button class="file-menu-button" @click.stop="openFileMenu(folder)">
@@ -114,7 +114,8 @@
 
                         <div class="file-info">
                             <h3 class="file-name">{{ file.originalFileName }}</h3>
-                            <p class="file-meta">{{ file.size }} KB • {{ file.createdAt.split(' ')[0] }}</p>
+                            <p class="file-meta">{{ formatFileSize(file.size) }} • {{ file.createdAt.split(' ')[0] }}
+                            </p>
                         </div>
 
                         <button class="file-menu-button" @click.stop="openFileMenu(file)">
@@ -136,24 +137,42 @@
                         <div class="col-actions"></div>
                     </div>
 
-                    <div v-for="file in files" :key="file.id" class="list-item" @click="selectFile(file)"
-                        @dblclick="openFile(file)">
+                    <!-- 폴더 목록 -->
+                    <div v-for="folder in currentFolder.childFolders" :key="folder.id" class="list-item"
+                        @click="selectFile(folder)" @dblclick="openFile(folder)">
                         <div class="col-name">
-                            <svg class="file-icon" v-if="file.type === 'folder'" viewBox="0 0 24 24" fill="none"
-                                xmlns="http://www.w3.org/2000/svg">
+                            <svg class="file-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
                                     stroke="currentColor" stroke-width="2" />
                             </svg>
-                            <svg class="file-icon" v-else viewBox="0 0 24 24" fill="none"
-                                xmlns="http://www.w3.org/2000/svg">
+                            <span>{{ folder.folderName }}</span>
+                        </div>
+                        <div class="col-size">—</div>
+                        <div class="col-date">{{ folder.createdAt.split(' ')[0] }}</div>
+                        <div class="col-actions">
+                            <button class="list-menu-button" @click.stop="openFileMenu(folder)">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="12" r="1" stroke="currentColor" stroke-width="2" />
+                                    <circle cx="19" cy="12" r="1" stroke="currentColor" stroke-width="2" />
+                                    <circle cx="5" cy="12" r="1" stroke="currentColor" stroke-width="2" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 파일 목록 -->
+                    <div v-for="file in files" :key="file.id" class="list-item" @click="selectFile(file)"
+                        @dblclick="openFile(file)">
+                        <div class="col-name">
+                            <svg class="file-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
                                     stroke="currentColor" stroke-width="2" />
                                 <polyline points="13 2 13 9 20 9" stroke="currentColor" stroke-width="2" />
                             </svg>
-                            <span>{{ file.name }}</span>
+                            <span>{{ file.originalFileName }}</span>
                         </div>
-                        <div class="col-size">{{ file.size }}</div>
-                        <div class="col-date">{{ file.date }}</div>
+                        <div class="col-size">{{ formatFileSize(file.size) }}</div>
+                        <div class="col-date">{{ file.createdAt.split(' ')[0] }}</div>
                         <div class="col-actions">
                             <button class="list-menu-button" @click.stop="openFileMenu(file)">
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -196,7 +215,32 @@ import ConfirmPopup from '@/component/ConfirmPopup.vue'
 import axios from 'axios'
 import { API_CONFIG, getApiUrl } from '@/config/api'
 import FolderCreatePopup from './FolderCreatePopup.vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
+
+// 타입 정의
+interface FileData {
+    id: number
+    originalFileName: string
+    size: number
+    createdAt: string
+    type?: string
+}
+
+interface FolderData {
+    id: number
+    folderName: string
+    createdAt: string
+    parentFolderId?: number
+    hierarchy?: string
+}
+
+interface CurrentFolderData {
+    id: number
+    folderName: string
+    parentFolderId: number
+    hierarchy: string
+    childFolders: FolderData[]
+}
 
 const route = useRoute()
 const viewMode = ref<'grid' | 'list'>('grid')
@@ -205,17 +249,8 @@ const isUploadPopupVisible = ref(false)
 const isConfirmPopupVisible = ref()
 const confirmTitle = ref<string>('')
 const confirmMsg = ref<string>('')
-const files = ref([
-    // { id: 1, name: '프로젝트 문서', type: 'folder', size: '—', date: '2024-12-15' },
-    // { id: 2, name: 'design-mockup.fig', type: 'file', size: '2.4 MB', date: '2024-12-18' },
-    // { id: 3, name: 'presentation.pdf', type: 'file', size: '5.1 MB', date: '2024-12-19' },
-    // { id: 4, name: 'image-gallery', type: 'folder', size: '—', date: '2024-12-10' },
-    // { id: 5, name: 'screenshot.png', type: 'image', size: '1.2 MB', date: '2024-12-19' },
-    // { id: 6, name: 'budget-2024.xlsx', type: 'file', size: '856 KB', date: '2024-12-17' },
-    // { id: 7, name: 'meeting-notes.docx', type: 'file', size: '124 KB', date: '2024-12-18' },
-    // { id: 8, name: '백업', type: 'folder', size: '—', date: '2024-12-01' }
-])
-const currentFolder = ref({
+const files = ref<FileData[]>([])
+const currentFolder = ref<CurrentFolderData>({
     id: 0,
     folderName: '',
     parentFolderId: 0,
@@ -223,21 +258,40 @@ const currentFolder = ref({
     childFolders: []
 })
 
-const folders = ref([])
-
 const fileCount = ref(files.value.length)
 
-const selectFile = (file: any) => {
+/**
+ * 파일 크기를 KB, MB, GB 단위로 변환합니다.
+ * @param sizeInKB - KB 단위의 파일 크기
+ * @returns 포맷된 파일 크기 문자열
+ */
+const formatFileSize = (sizeInKB: number): string => {
+    if (!sizeInKB || sizeInKB === 0) return '0 KB'
+
+    const kb = sizeInKB
+    const mb = kb / 1024
+    const gb = mb / 1024
+
+    if (gb >= 1) {
+        return `${gb.toFixed(2)} GB`
+    } else if (mb >= 1) {
+        return `${mb.toFixed(2)} MB`
+    } else {
+        return `${kb.toFixed(2)} KB`
+    }
+}
+
+const selectFile = (file: FileData | FolderData) => {
     console.log('파일 선택:', file)
     // TODO: 파일 선택 처리
 }
 
-const openFile = (file: any) => {
+const openFile = (file: FileData | FolderData) => {
     console.log('파일 열기:', file)
     // TODO: 파일 열기 처리
 }
 
-const openFileMenu = (file: any) => {
+const openFileMenu = (file: FileData | FolderData) => {
     console.log('파일 메뉴:', file)
     // TODO: 컨텍스트 메뉴 표시
 }
