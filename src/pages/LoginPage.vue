@@ -88,7 +88,12 @@ onMounted(async () => {
     const token = urlParams.get("token");
     if (token) {
         localStorage.setItem('jwt', token);
-        router.push('/bucket');
+        router.push({
+            path: '/bucket',
+            query: {
+                folderid: 0
+            }
+        })
     }
 });
 </script>

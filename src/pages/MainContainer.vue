@@ -61,6 +61,32 @@
 
                 <!-- 파일 그리드 뷰 -->
                 <div v-if="viewMode === 'grid'" class="file-grid">
+                    <div v-for="folder in currentFolder.childFolders" :key="folder.id" class="file-card"
+                        @click="selectFile(folder)" @dblclick="openFile(folder)">
+                        <div class="file-thumbnail">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </div>
+
+                        <div class="file-info">
+                            <h3 class="file-name">{{ folder.folderName }}</h3>
+                            <p class="file-meta">{{ folder.size }} • {{ folder.createdAt }}</p>
+                        </div>
+
+                        <button class="file-menu-button" @click.stop="openFileMenu(folder)">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="12" cy="12" r="1" stroke="currentColor" stroke-width="2" />
+                                <circle cx="12" cy="5" r="1" stroke="currentColor" stroke-width="2" />
+                                <circle cx="12" cy="19" r="1" stroke="currentColor" stroke-width="2" />
+                            </svg>
+                        </button>
+                    </div>
+
+
+
                     <div v-for="file in files" :key="file.id" class="file-card" @click="selectFile(file)"
                         @dblclick="openFile(file)">
                         <div class="file-thumbnail">
@@ -169,7 +195,9 @@ import ConfirmPopup from '@/component/ConfirmPopup.vue'
 import axios from 'axios'
 import { API_CONFIG, getApiUrl } from '@/config/api'
 import FolderCreatePopup from './FolderCreatePopup.vue'
+import { useRoute, useRouter } from 'vue-router'
 
+const route = useRoute()
 const viewMode = ref<'grid' | 'list'>('grid')
 const sortBy = ref('name')
 const isUploadPopupVisible = ref(false)
@@ -190,7 +218,8 @@ const currentFolder = ref({
     id: 0,
     folderName: '',
     parentFolderId: 0,
-    hierarchy: ''
+    hierarchy: '',
+    childFolders: []
 })
 
 const folders = ref([])
@@ -256,7 +285,7 @@ const createFolder = (folderName: string) => {
         getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_CREATE),
         {
             folderName: folderName,
-            parentFolderId: currentFolder.value.parentFolderId
+            parentFolderId: Number(currentFolder.value.id) || 0
         },
         {
             headers: {
@@ -264,8 +293,12 @@ const createFolder = (folderName: string) => {
             },
             timeout: API_CONFIG.TIMEOUT
         }
-    ).then(response => {
+    ).then(async (response) => {
         console.log('폴더 생성 응답:', response.data)
+
+        // 폴더 목록 갱신
+        await getFolderData(currentFolder.value.id)
+
         confirmMsg.value = `폴더 "${folderName}"이(가) 생성되었습니다.`
         confirmTitle.value = '폴더 생성 성공'
         isConfirmPopupVisible.value = true
@@ -278,6 +311,9 @@ const createFolder = (folderName: string) => {
     closeFolderCreatePopup()
 }
 
+/**
+ * 현재 폴더의 하위 파일을 가져옵니다.
+ */
 const getObjectsData = async () => {
     console.log('jwt token : ', localStorage.getItem('jwt'))
     try {
@@ -296,27 +332,36 @@ const getObjectsData = async () => {
     }
 }
 
-// TODO : 폴더 가져올때 query param으로 가져올건지 url path로 가져올건지 결정해야함
-const getFolderData = async () => {
-    // try {
-    //     const response = await axios.get(
-    //         getApiUrl(API_CONFIG.ENDPOINTS.FOLDERS),
-    //         {
-    //             headers: {
-    //                 Authorization: `Bearer ${localStorage.getItem('jwt')}`, // 필요시 주석 해제
-    //             },
-    //             timeout: API_CONFIG.TIMEOUT
-    //         }
-    //     )
-    //     console.log('폴더 데이터:', response.data)
-    // } catch (error) {
-    //     console.error('폴더 데이터 가져오기 실패:', error)
-    // }
+/**
+ * 현재 폴더 정보와, 하위 폴더 목록을 가져옵니다.
+ */
+const getFolderData = async (folderId: number) => {
+    try {
+        await axios.get(
+            getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_GETDATA),
+            {
+                params: {
+                    folderId: folderId
+                },
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('jwt')}`, // 필요시 주석 해제
+                },
+                timeout: API_CONFIG.TIMEOUT
+            }
+        ).then(response => {
+            currentFolder.value = response.data.data
+            console.log('폴더 데이터:', currentFolder.value)
+            console.log('폴더 데이터(원장):', response.data.data)
+        })
+    } catch (error) {
+        console.error('폴더 데이터 가져오기 실패:', error)
+    }
 }
 
 onMounted(async () => {
+    const folderId = Number(route.query.folderid) || 0
+    await getFolderData(folderId)
     await getObjectsData()
-    await getFolderData()
 })
 
 </script>

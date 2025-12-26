@@ -7,7 +7,8 @@ export const API_CONFIG = {
     FOLDERS: '/folders',
     GET_OAUTH_PARAM: '/getOAuthParam',
     API_FILES_GETDATA: '/files/getData',
-    API_FOLDER_CREATE: '/folder/create'
+    API_FOLDER_CREATE: '/folder/create',
+    API_FOLDER_GETDATA: '/folder/getData',
   },
   TIMEOUT: 30000, // 30초
 } as const
