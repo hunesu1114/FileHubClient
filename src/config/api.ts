@@ -8,6 +8,7 @@ export const API_CONFIG = {
     GET_OAUTH_PARAM: '/getOAuthParam',
     API_FILES_GETDATA: '/files/getData',
     API_FILES_DOWNLOAD: '/files/download',
+    API_FILES_DOWNLOAD_MULTIPLE: '/files/download/multiple',
     API_FOLDER_CREATE: '/folder/create',
     API_FOLDER_GETDATA: '/folder/getData',
   },

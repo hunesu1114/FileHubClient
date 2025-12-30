@@ -423,7 +423,7 @@ const handleDownload = async (item: FileData | FolderData) => {
                 objectId: ('id' in item) ? item.id : null
             },
             headers: {
-                Authorization: `Bearer ${localStorage.getItem('jwt')}`, // 필요시 주석 해제
+                Authorization: `Bearer ${localStorage.getItem('jwt')}`,
             },
             responseType: 'blob',
             timeout: API_CONFIG.TIMEOUT
@@ -483,10 +483,38 @@ const handleBulkDownload = async () => {
     confirmTitle.value = '일괄 다운로드'
     isConfirmPopupVisible.value = true
     // TODO: 실제 일괄 다운로드 로직 구현
-    Array.from(selectedItems.value).forEach(async element => {
-        // TODO : 다운로드 api
-        // await handleDownload(element)
-    });
+    await axios.get(
+        getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_DOWNLOAD_MULTIPLE),
+        {
+            params: {
+                objectIds: Array.from(selectedItems.value).join(',')
+            },
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('jwt')}`, // 필요시 주석 해제
+            },
+            responseType: 'blob',
+            timeout: API_CONFIG.TIMEOUT
+        }
+    ).then(response => {
+        const disposition = response.headers['content-disposition'];
+        let filename = 'download.zip';
+        if (disposition) {
+            // filename*=UTF-8''... 형식 우선 처리
+            const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/);
+            if (utf8Match) {
+                filename = decodeURIComponent(utf8Match[1]);
+            }
+        }
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', filename)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+    }).catch(error => {
+        console.error('일괄 다운로드 실패:', error)
+    })
 }
 
 /**
