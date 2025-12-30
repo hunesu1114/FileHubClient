@@ -10,7 +10,16 @@
                 <!-- 헤더 영역 -->
                 <div class="content-header">
                     <div class="header-left">
-                        <h1 class="page-title">전체 파일</h1>
+                        <div class="title-row">
+                            <h1 class="page-title">전체 파일</h1>
+                            <div class="breadcrumb-container">
+                                <button v-for="(crumb, index) in breadcrumbs" :key="index" class="breadcrumb-item"
+                                    :class="{ 'active': index === breadcrumbs.length - 1 }"
+                                    @click="navigateToFolder(crumb.id)">
+                                    {{ crumb.name }}
+                                </button>
+                            </div>
+                        </div>
                         <p class="page-subtitle">{{ fileCount }}개의 파일</p>
                     </div>
 
@@ -100,7 +109,7 @@
                 <div v-if="viewMode === 'grid'" class="file-grid">
                     <!-- 폴더 -->
                     <div v-for="folder in currentFolder.childFolders" :key="folder.id" class="file-card"
-                        :class="{ 'selected': selectedItems.has(folder.id) }" @click="selectFile(folder)"
+                        :class="{ 'selected': selectedItems.has(folder.id) }" @click="openFile(folder)"
                         @dblclick="openFile(folder)">
                         <div class="file-checkbox-wrapper">
                             <input type="checkbox" :id="`folder-${folder.id}`" :checked="selectedItems.has(folder.id)"
@@ -191,7 +200,7 @@
 
                     <!-- 폴더 목록 -->
                     <div v-for="folder in currentFolder.childFolders" :key="folder.id" class="list-item"
-                        :class="{ 'selected': selectedItems.has(folder.id) }" @click="selectFile(folder)"
+                        :class="{ 'selected': selectedItems.has(folder.id) }" @click="openFile(folder)"
                         @dblclick="openFile(folder)">
                         <div class="col-checkbox">
                             <input type="checkbox" :id="`list-folder-${folder.id}`"
@@ -275,7 +284,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import GnbContainer from './GnbContainer.vue'
 import LnbContainer from './LnbContainer.vue'
 import UploadPopup from './UploadPopup.vue'
@@ -284,7 +293,7 @@ import FileContextMenu from '@/component/FileContextMenu.vue'
 import axios from 'axios'
 import { API_CONFIG, getApiUrl } from '@/config/api'
 import FolderCreatePopup from './FolderCreatePopup.vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 // 타입 정의
 interface FileData {
@@ -312,7 +321,9 @@ interface CurrentFolderData {
 }
 
 const route = useRoute()
+const router = useRouter()
 const viewMode = ref<'grid' | 'list'>('grid')
+const breadcrumbs = ref<Array<{ id: number; name: string }>>([{ id: 0, name: '내 드라이브' }])
 const sortBy = ref('name')
 const isUploadPopupVisible = ref(false)
 const isConfirmPopupVisible = ref()
@@ -384,7 +395,12 @@ const selectFile = (file: FileData | FolderData) => {
  */
 const openFile = (file: FileData | FolderData) => {
     console.log('파일 열기:', file)
-    // TODO: 파일 열기 처리
+    // 폴더인 경우 해당 폴더로 이동
+    if ('folderName' in file) {
+        navigateToFolder(file.id)
+    } else {
+        // TODO: 파일 미리보기 처리
+    }
 }
 
 /**
@@ -610,6 +626,40 @@ const createFolder = (folderName: string) => {
 }
 
 /**
+ * 특정 폴더로 이동합니다.
+ */
+const navigateToFolder = (folderId: number) => {
+    router.push({ query: { folderid: folderId } })
+}
+
+/**
+ * hierarchy 문자열을 파싱하여 breadcrumb 데이터를 생성합니다.
+ */
+const updateBreadcrumbs = () => {
+    const hierarchy = currentFolder.value.hierarchy
+    if (!hierarchy) {
+        breadcrumbs.value = [{ id: 0, name: '내 드라이브' }]
+        return
+    }
+
+    // hierarchy는 "내 드라이브>폴더1>폴더2" 형식
+    const parts = hierarchy.split('>')
+    breadcrumbs.value = parts.map((name, index) => {
+        // 첫 번째는 루트 폴더 (id: 0)
+        if (index === 0) {
+            return { id: 0, name: '내 드라이브' }
+        }
+        // TODO: 각 폴더의 실제 ID를 가져오려면 추가 정보가 필요
+        // 현재는 마지막 폴더만 정확한 ID를 알 수 있음
+        if (index === parts.length - 1) {
+            return { id: currentFolder.value.id, name }
+        }
+        // 중간 폴더들은 parentFolderId를 역추적해야 하므로 일단 현재 폴더 ID 사용
+        return { id: currentFolder.value.id, name }
+    })
+}
+
+/**
  * 현재 폴더의 하위 파일을 가져옵니다.
  */
 const getObjectsData = async () => {
@@ -652,11 +702,20 @@ const getFolderData = async (folderId: number) => {
             currentFolder.value = response.data.data
             console.log('폴더 데이터:', currentFolder.value)
             console.log('폴더 데이터(원장):', response.data.data)
+            updateBreadcrumbs()
         })
     } catch (error) {
         console.error('폴더 데이터 가져오기 실패:', error)
     }
 }
+
+// folderid 쿼리 파라미터 변경 감지
+watch(() => route.query.folderid, async (newFolderId) => {
+    const folderId = Number(newFolderId) || 0
+    selectedItems.value.clear() // 선택 항목 초기화
+    await getFolderData(folderId)
+    await getObjectsData()
+})
 
 onMounted(async () => {
     const folderId = Number(route.query.folderid) || 0
@@ -704,11 +763,54 @@ onMounted(async () => {
     flex: 1;
 }
 
+.title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
 .page-title {
     font-size: 24px;
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 4px;
+}
+
+.breadcrumb-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.breadcrumb-item {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.breadcrumb-item:not(:last-child)::after {
+    content: '>';
+    position: absolute;
+    right: -6px;
+    color: var(--text-tertiary);
+    font-weight: 400;
+}
+
+.breadcrumb-item:hover:not(.active) {
+    background: var(--bg-tertiary);
+    color: var(--accent-primary);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: default;
 }
 
 .page-subtitle {
