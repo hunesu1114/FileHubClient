@@ -393,7 +393,7 @@ const openFile = (file: FileData | FolderData) => {
 const openFileMenu = (file: FileData | FolderData, event: MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
-    
+
     contextMenuTarget.value = file
     contextMenuX.value = event.clientX
     contextMenuY.value = event.clientY
@@ -411,12 +411,34 @@ const closeContextMenu = () => {
 /**
  * 다운로드 처리
  */
-const handleDownload = (item: FileData | FolderData) => {
-    console.log('다운로드:', item)
-    confirmMsg.value = `"${('originalFileName' in item ? item.originalFileName : item.folderName)}"을(를) 다운로드합니다.`
-    confirmTitle.value = '다운로드'
-    isConfirmPopupVisible.value = true
-    // TODO: 실제 다운로드 로직 구현
+const handleDownload = async (item: FileData | FolderData) => {
+    // console.log('다운로드:', item)
+    // confirmMsg.value = `"${('originalFileName' in item ? item.originalFileName : item.folderName)}"을(를) 다운로드합니다.`
+    // confirmTitle.value = '다운로드'
+    // isConfirmPopupVisible.value = true
+    await axios.get(
+        getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_DOWNLOAD),
+        {
+            params: {
+                objectId: ('id' in item) ? item.id : null
+            },
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('jwt')}`, // 필요시 주석 해제
+            },
+            responseType: 'blob',
+            timeout: API_CONFIG.TIMEOUT
+        }
+    ).then(response => {
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', ('originalFileName' in item) ? item.originalFileName : 'download')
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+    }).catch(error => {
+        console.error('다운로드 실패:', error)
+    })
 }
 
 /**
@@ -455,12 +477,16 @@ const handleEdit = (item: FileData | FolderData) => {
 /**
  * 일괄 다운로드 처리
  */
-const handleBulkDownload = () => {
+const handleBulkDownload = async () => {
     console.log('일괄 다운로드:', Array.from(selectedItems.value))
     confirmMsg.value = `선택한 ${selectedItems.value.size}개 항목을 다운로드합니다.`
     confirmTitle.value = '일괄 다운로드'
     isConfirmPopupVisible.value = true
     // TODO: 실제 일괄 다운로드 로직 구현
+    Array.from(selectedItems.value).forEach(async element => {
+        // TODO : 다운로드 api
+        // await handleDownload(element)
+    });
 }
 
 /**
