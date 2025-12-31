@@ -88,14 +88,24 @@ onMounted(async () => {
     const token = urlParams.get("token");
     if (token) {
         localStorage.setItem('jwt', token);
-        router.push({
-            path: '/bucket',
-            query: {
-                folderid: 0
+        // TOOD : root 폴더로 이동
+        await axios(getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_GETROOTFOLDERID), {
+            headers: {
+                'Authorization': `Bearer ${token}`
             }
-        })
+        }).then(response => {
+            {
+                const rootFolderId = response.data.data;
+                router.push({
+                    path: '/bucket',
+                    query: {
+                        folderid: rootFolderId
+                    }
+                })
+            }
+        });
     }
-});
+})
 </script>
 
 <style scoped>

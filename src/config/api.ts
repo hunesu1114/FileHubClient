@@ -11,6 +11,7 @@ export const API_CONFIG = {
     API_FILES_DOWNLOAD_MULTIPLE: '/files/download/multiple',
     API_FOLDER_CREATE: '/folder/create',
     API_FOLDER_GETDATA: '/folder/getData',
+    API_FOLDER_GETROOTFOLDERID: '/folder/getRootFolderId',
   },
   TIMEOUT: 30000, // 30초
 } as const

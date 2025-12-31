@@ -662,12 +662,15 @@ const updateBreadcrumbs = () => {
 /**
  * 현재 폴더의 하위 파일을 가져옵니다.
  */
-const getObjectsData = async () => {
+const getObjectsData = async (folderId: number) => {
     console.log('jwt token : ', localStorage.getItem('jwt'))
     try {
         await axios.get(
             getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_GETDATA),
             {
+                params: {
+                    folderId: folderId
+                },
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('jwt')}`, // 필요시 주석 해제
                 },
@@ -714,13 +717,13 @@ watch(() => route.query.folderid, async (newFolderId) => {
     const folderId = Number(newFolderId) || 0
     selectedItems.value.clear() // 선택 항목 초기화
     await getFolderData(folderId)
-    await getObjectsData()
+    await getObjectsData(folderId)
 })
 
 onMounted(async () => {
     const folderId = Number(route.query.folderid) || 0
     await getFolderData(folderId)
-    await getObjectsData()
+    await getObjectsData(folderId)
 })
 
 </script>
