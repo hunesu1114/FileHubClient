@@ -324,6 +324,7 @@ const route = useRoute()
 const router = useRouter()
 const viewMode = ref<'grid' | 'list'>('grid')
 const breadcrumbs = ref<Array<{ id: number; name: string }>>([{ id: 0, name: '내 드라이브' }])
+const rootFolderId = ref<number>(0)
 const sortBy = ref('name')
 const isUploadPopupVisible = ref(false)
 const isConfirmPopupVisible = ref()
@@ -638,16 +639,16 @@ const navigateToFolder = (folderId: number) => {
 const updateBreadcrumbs = () => {
     const hierarchy = currentFolder.value.hierarchy
     if (!hierarchy) {
-        breadcrumbs.value = [{ id: 0, name: '내 드라이브' }]
+        breadcrumbs.value = [{ id: rootFolderId.value, name: '내 드라이브' }]
         return
     }
 
     // hierarchy는 "내 드라이브>폴더1>폴더2" 형식
     const parts = hierarchy.split('>')
     breadcrumbs.value = parts.map((name, index) => {
-        // 첫 번째는 루트 폴더 (id: 0)
+        // 첫 번째는 루트 폴더
         if (index === 0) {
-            return { id: 0, name: '내 드라이브' }
+            return { id: rootFolderId.value, name: '내 드라이브' }
         }
         // TODO: 각 폴더의 실제 ID를 가져오려면 추가 정보가 필요
         // 현재는 마지막 폴더만 정확한 ID를 알 수 있음
@@ -705,6 +706,12 @@ const getFolderData = async (folderId: number) => {
             currentFolder.value = response.data.data
             console.log('폴더 데이터:', currentFolder.value)
             console.log('폴더 데이터(원장):', response.data.data)
+
+            // root 폴더인 경우 rootFolderId 저장
+            if (currentFolder.value.parentFolderId === 0 || currentFolder.value.parentFolderId === null) {
+                rootFolderId.value = currentFolder.value.id
+            }
+
             updateBreadcrumbs()
         })
     } catch (error) {
