@@ -4,7 +4,7 @@
         <GnbContainer @upload="openUploadPopup" />
 
         <div class="main-body">
-            <LnbContainer @create="openFolderCreatePopup" :folder-id="currentFolder.id"/>
+            <LnbContainer @create="openFolderCreatePopup" :folder-id="Number(route.query.folderid) || 0"/>
 
             <main class="content-area">
                 <!-- 헤더 영역 -->
@@ -284,7 +284,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onBeforeMount, onMounted, ref, watch } from 'vue'
 import GnbContainer from './GnbContainer.vue'
 import LnbContainer from './LnbContainer.vue'
 import UploadPopup from './UploadPopup.vue'
@@ -664,7 +664,7 @@ const updateBreadcrumbs = () => {
  * 현재 폴더의 하위 파일을 가져옵니다.
  */
 const getObjectsData = async (folderId: number) => {
-    console.log('jwt token : ', localStorage.getItem('jwt'))
+    // console.log('jwt token : ', localStorage.getItem('jwt'))
     try {
         await axios.get(
             getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_GETDATA),
@@ -704,8 +704,8 @@ const getFolderData = async (folderId: number) => {
             }
         ).then(response => {
             currentFolder.value = response.data.data
-            console.log('폴더 데이터:', currentFolder.value)
-            console.log('폴더 데이터(원장):', response.data.data)
+            // console.log('폴더 데이터:', currentFolder.value)
+            // console.log('폴더 데이터(원장):', response.data.data)
 
             // root 폴더인 경우 rootFolderId 저장
             if (currentFolder.value.parentFolderId === 0 || currentFolder.value.parentFolderId === null) {
@@ -725,15 +725,16 @@ watch(() => route.query.folderid, async (newFolderId) => {
     selectedItems.value.clear() // 선택 항목 초기화
     await getFolderData(folderId)
     await getObjectsData(folderId)
-})
+}, { immediate: true })
 
 onMounted(async () => {
-    const folderId = Number(route.query.folderid) || 0
-    await getFolderData(folderId)
-    await getObjectsData(folderId)
+    // watch immediate로 처리되므로 여기서는 불필요
+})
+
+onBeforeMount(async () => {
+    // watch immediate로 처리되므로 여기서는 불필요
 })
 
 </script>
 
 <style scoped src="../assets/styles/MainContainer.css"></style>
-

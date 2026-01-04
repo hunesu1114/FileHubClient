@@ -4,7 +4,6 @@ export const API_CONFIG = {
   ENDPOINTS: {
     UPLOAD: '/files/upload',
     FILES: '/files',
-    FOLDERS: '/folders',
     GET_OAUTH_PARAM: '/getOAuthParam',
     API_FILES_GETDATA: '/files/getData',
     API_FILES_DOWNLOAD: '/files/download',
@@ -12,6 +11,7 @@ export const API_CONFIG = {
     API_FOLDER_CREATE: '/folder/create',
     API_FOLDER_GETDATA: '/folder/getData',
     API_FOLDER_GETROOTFOLDERID: '/folder/getRootFolderId',
+    API_FOLDERS_GETTREE: '/folder/getTree',
   },
   TIMEOUT: 30000, // 30초
 } as const

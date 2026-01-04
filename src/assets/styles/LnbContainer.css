@@ -210,6 +210,16 @@
     color: white;
 }
 
+/* 폴더 링크 (토글 버튼과 분리) */
+.folder-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    text-decoration: none;
+    color: inherit;
+}
+
 /* 폴더 트리 스타일 */
 .folder-tree {
     display: flex;
