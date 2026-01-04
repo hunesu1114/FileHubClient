@@ -1,0 +1,208 @@
+.gnb-container {
+    width: 100%;
+    height: 64px;
+    background: var(--bg-secondary);
+    border-bottom: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    gap: 24px;
+    transition: all 0.3s ease;
+}
+
+.gnb-left {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    flex: 1;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.logo svg {
+    width: 32px;
+    height: 32px;
+    color: var(--accent-primary);
+}
+
+.logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.search-bar {
+    flex: 1;
+    max-width: 500px;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 16px;
+    width: 20px;
+    height: 20px;
+    color: var(--text-tertiary);
+    pointer-events: none;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 10px 16px 10px 48px;
+    font-size: 14px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.search-bar input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 4px rgba(76, 110, 245, 0.1);
+}
+
+.gnb-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.upload-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(76, 110, 245, 0.3);
+}
+
+.upload-button svg {
+    width: 20px;
+    height: 20px;
+}
+
+.upload-button:hover {
+    box-shadow: 0 4px 12px rgba(76, 110, 245, 0.4);
+}
+
+.icon-button {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.icon-button svg {
+    width: 20px;
+    height: 20px;
+}
+
+.icon-button:hover {
+    background: var(--bg-tertiary);
+    color: var(--accent-primary);
+}
+
+.badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    background: var(--accent-danger);
+    border-radius: 9px;
+    border: 2px solid var(--bg-secondary);
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px 6px 6px;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.user-profile:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--accent-primary);
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: 50%;
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.chevron {
+    width: 16px;
+    height: 16px;
+    color: var(--text-tertiary);
+    transition: transform 0.2s ease;
+}
+
+.user-profile:hover .chevron {
+    transform: translateY(2px);
+}
+
+@media (max-width: 768px) {
+    .gnb-container {
+        padding: 0 16px;
+    }
+
+    .search-bar {
+        max-width: 300px;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .logo-text {
+        display: none;
+    }
+}

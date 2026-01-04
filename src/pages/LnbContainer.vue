@@ -33,7 +33,88 @@
             <div class="nav-section">
                 <h3 class="section-title" v-if="!isCollapsed">빠른 접근</h3>
 
-                <a v-for="item in quickAccessItems" :key="item.id" :href="item.path" class="nav-item"
+                <!-- 전체 파일 (폴더 트리 포함) -->
+                <div class="folder-tree">
+                    <div class="folder-tree-item" :class="{ 'is-root': true }">
+                        <a href="/all-files" class="nav-item"
+                            :class="{ active: currentPath === '/all-files' }"
+                            @click.prevent="navigateTo('/all-files')">
+                            <button class="folder-toggle" @click.stop="toggleAllFiles" v-if="!isCollapsed">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                    :class="{ 'is-open': isAllFilesExpanded }">
+                                    <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </button>
+                            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                            <span class="nav-label" v-if="!isCollapsed">전체 파일</span>
+                        </a>
+                    </div>
+
+                    <!-- 하위 폴더 트리 -->
+                    <div class="folder-tree-children" v-if="isAllFilesExpanded && !isCollapsed">
+                        <div v-for="folder in folderTree" :key="folder.id" class="folder-tree-item"
+                            :style="{ paddingLeft: folder.level * 16 + 'px' }">
+                            <a :href="folder.path" class="nav-item" :class="{ active: currentPath === folder.path }"
+                                @click.prevent="navigateTo(folder.path)">
+                                <button class="folder-toggle" @click.stop="toggleFolder(folder.id)"
+                                    v-if="folder.children && folder.children.length > 0">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                        :class="{ 'is-open': folder.isExpanded }">
+                                        <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                </button>
+                                <span class="folder-toggle-placeholder" v-else></span>
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                                <span class="nav-label">{{ folder.name }}</span>
+                                <span class="folder-count" v-if="folder.fileCount">{{ folder.fileCount }}</span>
+                            </a>
+
+                            <!-- 재귀적으로 자식 폴더 렌더링 -->
+                            <div class="folder-tree-children" v-if="folder.isExpanded && folder.children">
+                                <div v-for="child in folder.children" :key="child.id" class="folder-tree-item"
+                                    :style="{ paddingLeft: child.level * 16 + 'px' }">
+                                    <a :href="child.path" class="nav-item"
+                                        :class="{ active: currentPath === child.path }"
+                                        @click.prevent="navigateTo(child.path)">
+                                        <button class="folder-toggle" @click.stop="toggleFolder(child.id)"
+                                            v-if="child.children && child.children.length > 0">
+                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                                :class="{ 'is-open': child.isExpanded }">
+                                                <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2"
+                                                    stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
+                                        </button>
+                                        <span class="folder-toggle-placeholder" v-else></span>
+                                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path
+                                                d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                                                stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round" />
+                                        </svg>
+                                        <span class="nav-label">{{ child.name }}</span>
+                                        <span class="folder-count" v-if="child.fileCount">{{ child.fileCount }}</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 나머지 빠른 접근 항목들 -->
+                <a v-for="item in otherQuickAccessItems" :key="item.id" :href="item.path" class="nav-item"
                     :class="{ active: currentPath === item.path }" @click.prevent="navigateTo(item.path)">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path :d="item.icon" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -43,30 +124,28 @@
                     <span class="nav-count" v-if="!isCollapsed && item.count">{{ item.count }}</span>
                 </a>
             </div>
-
-            <div class="nav-section">
-                <h3 class="section-title" v-if="!isCollapsed">폴더</h3>
-
-                <a v-for="folder in folders" :key="folder.id" :href="folder.path" class="nav-item"
-                    :class="{ active: currentPath === folder.path }" @click.prevent="navigateTo(folder.path)">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    <span class="nav-label" v-if="!isCollapsed">{{ folder.name }}</span>
-                </a>
-            </div>
         </nav>
     </aside>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+
+interface FolderItem {
+    id: number
+    name: string
+    path: string
+    level: number
+    fileCount?: number
+    children?: FolderItem[]
+    isExpanded?: boolean
+}
 
 const isCollapsed = ref(false)
 const currentPath = ref('/all-files')
 const usedStorage = ref('15.2 GB')
 const totalStorage = ref('50 GB')
+const isAllFilesExpanded = ref(true)
 
 const storagePercentage = computed(() => {
     const used = parseFloat(usedStorage.value)
@@ -74,18 +153,20 @@ const storagePercentage = computed(() => {
     return (used / total) * 100
 })
 
+interface Props {
+    folderId?: number
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    folderId: 0
+})
+
 const emit = defineEmits<{
     create: []
 }>()
 
-const quickAccessItems = ref([
-    {
-        id: 1,
-        label: '전체 파일',
-        path: '/all-files',
-        icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
-        count: null
-    },
+// 전체 파일 외의 빠른 접근 항목들
+const otherQuickAccessItems = ref([
     {
         id: 2,
         label: '최근 항목',
@@ -116,11 +197,120 @@ const quickAccessItems = ref([
     }
 ])
 
-const folders = ref([
-    // { id: 101, name: '프로젝트', path: '/folder/projects' },
-    // { id: 102, name: '문서', path: '/folder/documents' },
-    // { id: 103, name: '이미지', path: '/folder/images' },
-    // { id: 104, name: '비디오', path: '/folder/videos' }
+// 폴더 트리 구조 (샘플 데이터)
+const folderTree = ref<FolderItem[]>([
+    {
+        id: 101,
+        name: '프로젝트',
+        path: '/folder/projects',
+        level: 1,
+        fileCount: 24,
+        isExpanded: false,
+        children: [
+            {
+                id: 1011,
+                name: 'FileHub',
+                path: '/folder/projects/filehub',
+                level: 2,
+                fileCount: 15,
+                isExpanded: false,
+                children: [
+                    {
+                        id: 10111,
+                        name: 'Frontend',
+                        path: '/folder/projects/filehub/frontend',
+                        level: 3,
+                        fileCount: 8,
+                        isExpanded: false
+                    },
+                    {
+                        id: 10112,
+                        name: 'Backend',
+                        path: '/folder/projects/filehub/backend',
+                        level: 3,
+                        fileCount: 7,
+                        isExpanded: false
+                    }
+                ]
+            },
+            {
+                id: 1012,
+                name: 'WebApp',
+                path: '/folder/projects/webapp',
+                level: 2,
+                fileCount: 9,
+                isExpanded: false
+            }
+        ]
+    },
+    {
+        id: 102,
+        name: '문서',
+        path: '/folder/documents',
+        level: 1,
+        fileCount: 42,
+        isExpanded: false,
+        children: [
+            {
+                id: 1021,
+                name: '회의록',
+                path: '/folder/documents/meetings',
+                level: 2,
+                fileCount: 18,
+                isExpanded: false
+            },
+            {
+                id: 1022,
+                name: '제안서',
+                path: '/folder/documents/proposals',
+                level: 2,
+                fileCount: 12,
+                isExpanded: false
+            },
+            {
+                id: 1023,
+                name: '계약서',
+                path: '/folder/documents/contracts',
+                level: 2,
+                fileCount: 12,
+                isExpanded: false
+            }
+        ]
+    },
+    {
+        id: 103,
+        name: '이미지',
+        path: '/folder/images',
+        level: 1,
+        fileCount: 156,
+        isExpanded: false,
+        children: [
+            {
+                id: 1031,
+                name: '디자인',
+                path: '/folder/images/design',
+                level: 2,
+                fileCount: 89,
+                isExpanded: false
+            },
+            {
+                id: 1032,
+                name: '사진',
+                path: '/folder/images/photos',
+                level: 2,
+                fileCount: 67,
+                isExpanded: false
+            }
+        ]
+    },
+    {
+        id: 104,
+        name: '비디오',
+        path: '/folder/videos',
+        level: 1,
+        fileCount: 28,
+        isExpanded: false
+    }
 ])
 
 const toggleCollapse = () => {
@@ -131,258 +321,36 @@ const createNewFolder = () => {
     emit('create')
 }
 
+const toggleAllFiles = () => {
+    isAllFilesExpanded.value = !isAllFilesExpanded.value
+}
 
+const toggleFolder = (folderId: number) => {
+    const toggleRecursive = (folders: FolderItem[]): boolean => {
+        for (const folder of folders) {
+            if (folder.id === folderId) {
+                folder.isExpanded = !folder.isExpanded
+                return true
+            }
+            if (folder.children && toggleRecursive(folder.children)) {
+                return true
+            }
+        }
+        return false
+    }
+    toggleRecursive(folderTree.value)
+}
 
 const navigateTo = (path: string) => {
     currentPath.value = path
     console.log('Navigate to:', path)
     // TODO: 라우터 네비게이션
 }
+
+onMounted(() => {
+    console.log("props.folderId : ", props.folderId);
+})
 </script>
 
-<style scoped>
-.lnb-container {
-    width: 280px;
-    height: 100%;
-    background: var(--bg-secondary);
-    border-right: 2px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    padding: 20px 16px;
-    gap: 20px;
-    position: relative;
-    transition: width 0.3s ease;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
+<style scoped src="../assets/styles/LnbContainer.css"></style>
 
-.lnb-container.collapsed {
-    width: 72px;
-    padding: 20px 12px;
-}
-
-.collapse-button {
-    position: absolute;
-    top: 20px;
-    right: -14px;
-    width: 28px;
-    height: 28px;
-    background: var(--bg-secondary);
-    border: 2px solid var(--border-color);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-tertiary);
-    z-index: 10;
-    transition: all 0.2s ease;
-}
-
-.collapse-button svg {
-    width: 16px;
-    height: 16px;
-    transition: transform 0.3s ease;
-}
-
-.lnb-container.collapsed .collapse-button svg {
-    transform: rotate(180deg);
-}
-
-.collapse-button:hover {
-    background: var(--accent-primary);
-    border-color: var(--accent-primary);
-    color: white;
-}
-
-.new-folder-button {
-    width: 100%;
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--accent-primary);
-    background: transparent;
-    border: 2px solid var(--accent-primary);
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-.new-folder-button svg {
-    width: 18px;
-    height: 18px;
-}
-
-.new-folder-button:hover {
-    background: var(--accent-primary);
-    color: white;
-}
-
-/* 스토리지 정보 */
-.storage-info {
-    padding: 16px;
-    background: var(--bg-primary);
-    border: 2px solid var(--border-color);
-    border-radius: 12px;
-}
-
-.storage-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
-
-.storage-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-secondary);
-}
-
-.storage-text {
-    font-size: 12px;
-    color: var(--text-tertiary);
-    font-weight: 500;
-}
-
-.storage-bar {
-    width: 100%;
-    height: 8px;
-    background: var(--bg-tertiary);
-    border-radius: 4px;
-    overflow: hidden;
-    position: relative;
-}
-
-.storage-progress {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
-    border-radius: 4px;
-    transition: width 0.3s ease;
-    box-shadow: 0 0 8px rgba(76, 110, 245, 0.4);
-}
-
-/* 네비게이션 메뉴 */
-.nav-menu {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    overflow-y: auto;
-}
-
-.nav-section {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.section-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 8px 12px;
-    margin-bottom: 4px;
-}
-
-.nav-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border-radius: 8px;
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    border: 2px solid transparent;
-    position: relative;
-}
-
-.lnb-container.collapsed .nav-item {
-    justify-content: center;
-    padding: 12px;
-}
-
-.nav-icon {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-}
-
-.nav-label {
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.nav-count {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-tertiary);
-    background: var(--bg-tertiary);
-    padding: 2px 8px;
-    border-radius: 12px;
-}
-
-.nav-item:hover {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border-color: var(--accent-primary);
-}
-
-.nav-item.active {
-    background: linear-gradient(135deg, rgba(76, 110, 245, 0.1) 0%, rgba(92, 124, 250, 0.1) 100%);
-    color: var(--accent-primary);
-    border-color: var(--accent-primary);
-    font-weight: 600;
-}
-
-.nav-item.active .nav-icon {
-    color: var(--accent-primary);
-}
-
-.nav-item.active .nav-count {
-    background: var(--accent-primary);
-    color: white;
-}
-
-/* 스크롤바 커스터마이징 */
-.lnb-container::-webkit-scrollbar {
-    width: 6px;
-}
-
-.lnb-container::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.lnb-container::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 3px;
-}
-
-.lnb-container::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-primary);
-}
-
-@media (max-width: 768px) {
-    .lnb-container {
-        position: absolute;
-        left: 0;
-        top: 0;
-        height: 100%;
-        z-index: 100;
-        box-shadow: var(--shadow-lg);
-    }
-
-    .lnb-container.collapsed {
-        transform: translateX(-100%);
-    }
-}
-</style>
