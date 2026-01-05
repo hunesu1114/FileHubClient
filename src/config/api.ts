@@ -13,6 +13,7 @@ export const API_CONFIG = {
     API_FOLDER_GETDATA: '/folder/getData',
     API_FOLDER_GETROOTFOLDERID: '/folder/getRootFolderId',
     API_FOLDERS_GETTREE: '/folder/getTree',
+    API_FOLDER_DELETE: '/folder/delete',
   },
   TIMEOUT: 30000, // 30초
 } as const

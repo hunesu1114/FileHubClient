@@ -109,11 +109,11 @@
                 <div v-if="viewMode === 'grid'" class="file-grid">
                     <!-- 폴더 -->
                     <div v-for="folder in currentFolder.childFolders" :key="folder.id" class="file-card"
-                        :class="{ 'selected': selectedItems.has(folder.id) }" @click="openFile(folder)"
+                        :class="{ 'selected': selectedFolders.has(folder.id) }" @click="openFile(folder)"
                         @dblclick="openFile(folder)">
                         <div class="file-checkbox-wrapper">
-                            <input type="checkbox" :id="`folder-${folder.id}`" :checked="selectedItems.has(folder.id)"
-                                @click="toggleSelection(folder.id, $event)" class="file-checkbox" />
+                            <input type="checkbox" :id="`folder-${folder.id}`" :checked="selectedFolders.has(folder.id)"
+                                @click="toggleSelection('folder', folder.id, $event)" class="file-checkbox" />
                             <label :for="`folder-${folder.id}`" class="checkbox-label" @click.stop></label>
                         </div>
 
@@ -145,7 +145,7 @@
                         @dblclick="openFile(file)">
                         <div class="file-checkbox-wrapper">
                             <input type="checkbox" :id="`file-${file.id}`" :checked="selectedItems.has(file.id)"
-                                @click="toggleSelection(file.id, $event)" class="file-checkbox" />
+                                @click="toggleSelection('file', file.id, $event)" class="file-checkbox" />
                             <label :for="`file-${file.id}`" class="checkbox-label" @click.stop></label>
                         </div>
 
@@ -200,12 +200,12 @@
 
                     <!-- 폴더 목록 -->
                     <div v-for="folder in currentFolder.childFolders" :key="folder.id" class="list-item"
-                        :class="{ 'selected': selectedItems.has(folder.id) }" @click="openFile(folder)"
+                        :class="{ 'selected': selectedFolders.has(folder.id) }" @click="openFile(folder)"
                         @dblclick="openFile(folder)">
                         <div class="col-checkbox">
                             <input type="checkbox" :id="`list-folder-${folder.id}`"
-                                :checked="selectedItems.has(folder.id)" @click="toggleSelection(folder.id, $event)"
-                                class="list-checkbox" />
+                                :checked="selectedFolders.has(folder.id)"
+                                @click="toggleSelection('folder', folder.id, $event)" class="list-checkbox" />
                             <label :for="`list-folder-${folder.id}`" class="checkbox-label" @click.stop></label>
                         </div>
                         <div class="col-name">
@@ -234,7 +234,7 @@
                         @dblclick="openFile(file)">
                         <div class="col-checkbox">
                             <input type="checkbox" :id="`list-file-${file.id}`" :checked="selectedItems.has(file.id)"
-                                @click="toggleSelection(file.id, $event)" class="list-checkbox" />
+                                @click="toggleSelection('file', file.id, $event)" class="list-checkbox" />
                             <label :for="`list-file-${file.id}`" class="checkbox-label" @click.stop></label>
                         </div>
                         <div class="col-name">
@@ -334,6 +334,7 @@ const files = ref<FileData[]>([])
 
 // 체크박스 선택 관련
 const selectedItems = ref<Set<number>>(new Set())
+const selectedFolders = ref<Set<number>>(new Set())
 
 // 컨텍스트 메뉴 관련
 const isContextMenuVisible = ref(false)
@@ -374,12 +375,21 @@ const formatFileSize = (sizeInKB: number): string => {
 /**
  * 체크박스 토글
  */
-const toggleSelection = (id: number, event: Event) => {
+const toggleSelection = (category: 'file' | 'folder', id: number, event: Event) => {
+    console.log("id : ", id);
     event.stopPropagation()
-    if (selectedItems.value.has(id)) {
-        selectedItems.value.delete(id)
-    } else {
-        selectedItems.value.add(id)
+    if (category === 'file') {
+        if (selectedItems.value.has(id)) {
+            selectedItems.value.delete(id)
+        } else {
+            selectedItems.value.add(id)
+        }
+    } else if (category === 'folder') {
+        if (selectedFolders.value.has(id)) {
+            selectedFolders.value.delete(id)
+        } else {
+            selectedFolders.value.add(id)
+        }
     }
 }
 
@@ -462,7 +472,6 @@ const handleDownload = async (item: FileData | FolderData) => {
  * 삭제 처리
  */
 const handleDelete = (item: FileData | FolderData) => {
-    console.log('삭제:', item)
     confirmMsg.value = `"${('originalFileName' in item ? item.originalFileName : item.folderName)}"을(를) 삭제하시겠습니까?`
     confirmTitle.value = '삭제 확인'
     isConfirmPopupVisible.value = true
@@ -499,7 +508,7 @@ const handleBulkDownload = async () => {
     confirmMsg.value = `선택한 ${selectedItems.value.size}개 항목을 다운로드합니다.`
     confirmTitle.value = '일괄 다운로드'
     isConfirmPopupVisible.value = true
-    // TODO: 실제 일괄 다운로드 로직 구현
+
     await axios.get(
         getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_DOWNLOAD_MULTIPLE),
         {
@@ -538,32 +547,60 @@ const handleBulkDownload = async () => {
  * 일괄 삭제 처리
  */
 const handleBulkDelete = async () => {
-    console.log('일괄 삭제:', Array.from(selectedItems.value))
     confirmMsg.value = `선택한 ${selectedItems.value.size}개 항목을 삭제하시겠습니까?`
     confirmTitle.value = '일괄 삭제 확인'
     isConfirmPopupVisible.value = true
-    await axios.post(
-        getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_DELETE),
-        {
-            objectIds: Array.from(selectedItems.value).join(',')
-        }, // 빈 body (서버에서 @RequestParam 사용하므로)
-        {
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('jwt')}`,
+
+    if (selectedFolders.value.size > 0) {
+        await axios.post(
+            getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_DELETE),
+            {
+                folderIds: Array.from(selectedFolders.value).join(',')
             },
-            timeout: API_CONFIG.TIMEOUT
-        }
-    ).then(response => {
-        console.log('일괄 삭제 응답:', response.data)
-        // 삭제 성공 후 목록 갱신
-        getFolderData(currentFolder.value.id)
-        getObjectsData(currentFolder.value.id)
-        selectedItems.value.clear()
-    }).catch(error => {
-        console.error('일괄 삭제 실패:', error)
-        confirmMsg.value = `삭제에 실패했습니다: ${error.message}`
-        confirmTitle.value = '삭제 실패'
-    })
+            {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('jwt')}`,
+                },
+                timeout: API_CONFIG.TIMEOUT
+            }
+        ).then(response => {
+            console.log('폴더 일괄 삭제 응답:', response.data)
+            // 삭제 성공 후 목록 갱신
+            getFolderData(currentFolder.value.id)
+            getObjectsData(currentFolder.value.id)
+            selectedFolders.value.clear()
+        }).catch(error => {
+            console.error('폴더 일괄 삭제 실패:', error)
+            confirmMsg.value = `삭제에 실패했습니다: ${error.message}`
+            confirmTitle.value = '삭제 실패'
+        })
+    }
+
+    if (selectedItems.value.size > 0) {
+        await axios.post(
+            getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_DELETE),
+            {
+                objectIds: Array.from(selectedItems.value).join(',')
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('jwt')}`,
+                },
+                timeout: API_CONFIG.TIMEOUT
+            }
+        ).then(response => {
+            console.log('일괄 삭제 응답:', response.data)
+            // 삭제 성공 후 목록 갱신
+            getFolderData(currentFolder.value.id)
+            getObjectsData(currentFolder.value.id)
+            selectedItems.value.clear()
+        }).catch(error => {
+            console.error('일괄 삭제 실패:', error)
+            confirmMsg.value = `삭제에 실패했습니다: ${error.message}`
+            confirmTitle.value = '삭제 실패'
+        })
+    }
+
 }
 
 /**
@@ -598,6 +635,8 @@ const closeUploadPopup = () => {
 const handleUpload = (uploadedFiles: File[]) => {
     console.log('업로드된 파일:', uploadedFiles)
     // TODO: 업로드된 파일 처리 및 파일 목록 갱신
+    getFolderData(currentFolder.value.id)
+    getObjectsData(currentFolder.value.id)
     confirmMsg.value = `${uploadedFiles.length}개의 파일이 업로드되었습니다.`
     confirmTitle.value = '업로드 성공'
     isConfirmPopupVisible.value = true
