@@ -4,7 +4,7 @@
         <GnbContainer @upload="openUploadPopup" />
 
         <div class="main-body">
-            <LnbContainer @create="openFolderCreatePopup" :folder-id="Number(route.query.folderid) || 0"/>
+            <LnbContainer @create="openFolderCreatePopup" :folder-id="Number(route.query.folderid) || 0" />
 
             <main class="content-area">
                 <!-- 헤더 영역 -->
@@ -537,12 +537,33 @@ const handleBulkDownload = async () => {
 /**
  * 일괄 삭제 처리
  */
-const handleBulkDelete = () => {
+const handleBulkDelete = async () => {
     console.log('일괄 삭제:', Array.from(selectedItems.value))
     confirmMsg.value = `선택한 ${selectedItems.value.size}개 항목을 삭제하시겠습니까?`
     confirmTitle.value = '일괄 삭제 확인'
     isConfirmPopupVisible.value = true
-    // TODO: 실제 일괄 삭제 로직 구현
+    await axios.post(
+        getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_DELETE),
+        {
+            objectIds: Array.from(selectedItems.value).join(',')
+        }, // 빈 body (서버에서 @RequestParam 사용하므로)
+        {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('jwt')}`,
+            },
+            timeout: API_CONFIG.TIMEOUT
+        }
+    ).then(response => {
+        console.log('일괄 삭제 응답:', response.data)
+        // 삭제 성공 후 목록 갱신
+        getFolderData(currentFolder.value.id)
+        getObjectsData(currentFolder.value.id)
+        selectedItems.value.clear()
+    }).catch(error => {
+        console.error('일괄 삭제 실패:', error)
+        confirmMsg.value = `삭제에 실패했습니다: ${error.message}`
+        confirmTitle.value = '삭제 실패'
+    })
 }
 
 /**
