@@ -60,6 +60,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/bucket/recycle-bin',
+      name: 'recycle-bin',
+      component: () => import('@/pages/RecycleBinPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/folder/:id',
       name: 'folder',
       component: () => import('@/pages/MainContainer.vue'),
