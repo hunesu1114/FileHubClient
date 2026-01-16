@@ -25,8 +25,8 @@
 
                     <div class="header-right">
                         <!-- 선택된 항목 액션 버튼 -->
-                        <div v-if="selectedItems.size > 0" class="selection-actions">
-                            <span class="selection-count">{{ selectedItems.size }}개 선택됨</span>
+                        <div v-if="selectedItems.size > 0 || selectedFolders.size > 0" class="selection-actions">
+                            <span class="selection-count">{{ selectedItems.size + selectedFolders.size }}개 선택됨</span>
                             <button class="action-button download-button" @click="handleBulkDownload" title="다운로드">
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor"
@@ -468,14 +468,18 @@ const handleDownload = async (item: FileData | FolderData) => {
     })
 }
 
+// 삭제할 항목 저장
+const itemToDelete = ref<FileData | FolderData | null>(null)
+const isBulkDelete = ref(false)
+
 /**
  * 삭제 처리
  */
 const handleDelete = (item: FileData | FolderData) => {
+    itemToDelete.value = item
     confirmMsg.value = `"${('originalFileName' in item ? item.originalFileName : item.folderName)}"을(를) 삭제하시겠습니까?`
     confirmTitle.value = '삭제 확인'
     isConfirmPopupVisible.value = true
-    // TODO: 실제 삭제 로직 구현
 }
 
 /**
@@ -504,8 +508,9 @@ const handleEdit = (item: FileData | FolderData) => {
  * 일괄 다운로드 처리
  */
 const handleBulkDownload = async () => {
-    console.log('일괄 다운로드:', Array.from(selectedItems.value))
-    confirmMsg.value = `선택한 ${selectedItems.value.size}개 항목을 다운로드합니다.`
+    const totalCount = selectedItems.value.size + selectedFolders.value.size
+    console.log('일괄 다운로드 - 파일:', Array.from(selectedItems.value), '폴더:', Array.from(selectedFolders.value))
+    confirmMsg.value = `선택한 ${totalCount}개 항목을 다운로드합니다.`
     confirmTitle.value = '일괄 다운로드'
     isConfirmPopupVisible.value = true
 
@@ -546,82 +551,162 @@ const handleBulkDownload = async () => {
 /**
  * 일괄 삭제 처리
  */
-const handleBulkDelete = async () => {
-    confirmMsg.value = `선택한 ${selectedItems.value.size}개 항목을 삭제하시겠습니까?`
+const handleBulkDelete = () => {
+    const totalCount = selectedItems.value.size + selectedFolders.value.size
+    confirmMsg.value = `선택한 ${totalCount}개 항목을 삭제하시겠습니까?`
     confirmTitle.value = '일괄 삭제 확인'
+    isBulkDelete.value = true
     isConfirmPopupVisible.value = true
-
-    if (selectedFolders.value.size > 0) {
-        await axios.post(
-            getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_DELETE),
-            {
-                folderIds: Array.from(selectedFolders.value).join(',')
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('jwt')}`,
-                },
-                timeout: API_CONFIG.TIMEOUT
-            }
-        ).then(response => {
-            console.log('폴더 일괄 삭제 응답:', response.data)
-            // 삭제 성공 후 목록 갱신
-            getFolderData(currentFolder.value.id)
-            getObjectsData(currentFolder.value.id)
-            selectedFolders.value.clear()
-        }).catch(error => {
-            console.error('폴더 일괄 삭제 실패:', error)
-            confirmMsg.value = `삭제에 실패했습니다: ${error.message}`
-            confirmTitle.value = '삭제 실패'
-        })
-    }
-
-    if (selectedItems.value.size > 0) {
-        await axios.post(
-            getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_DELETE),
-            {
-                objectIds: Array.from(selectedItems.value).join(',')
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('jwt')}`,
-                },
-                timeout: API_CONFIG.TIMEOUT
-            }
-        ).then(response => {
-            console.log('일괄 삭제 응답:', response.data)
-            // 삭제 성공 후 목록 갱신
-            getFolderData(currentFolder.value.id)
-            getObjectsData(currentFolder.value.id)
-            selectedItems.value.clear()
-        }).catch(error => {
-            console.error('일괄 삭제 실패:', error)
-            confirmMsg.value = `삭제에 실패했습니다: ${error.message}`
-            confirmTitle.value = '삭제 실패'
-        })
-    }
-
 }
 
 /**
  * 일괄 이동 처리
  */
 const handleBulkMove = () => {
-    console.log('일괄 이동:', Array.from(selectedItems.value))
-    confirmMsg.value = `선택한 ${selectedItems.value.size}개 항목을 이동합니다.`
+    const totalCount = selectedItems.value.size + selectedFolders.value.size
+    console.log('일괄 이동 - 파일:', Array.from(selectedItems.value), '폴더:', Array.from(selectedFolders.value))
+    confirmMsg.value = `선택한 ${totalCount}개 항목을 이동합니다.`
     confirmTitle.value = '일괄 이동'
     isConfirmPopupVisible.value = true
     // TODO: 실제 일괄 이동 로직 구현 (폴더 선택 팝업 필요)
 }
 
-const handleConfirm = () => {
+const handleConfirm = async () => {
     console.log('확인됨')
     isConfirmPopupVisible.value = false
+
+    // 일괄 삭제 처리
+    if (isBulkDelete.value) {
+        try {
+            // 폴더 일괄 삭제
+            if (selectedFolders.value.size > 0) {
+                await axios.post(
+                    getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_DELETE),
+                    {
+                        folderIds: Array.from(selectedFolders.value).join(',')
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem('jwt')}`,
+                        },
+                        timeout: API_CONFIG.TIMEOUT
+                    }
+                )
+                console.log('폴더 일괄 삭제 성공')
+            }
+
+            // 파일 일괄 삭제
+            if (selectedItems.value.size > 0) {
+                await axios.post(
+                    getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_DELETE),
+                    {
+                        objectIds: Array.from(selectedItems.value).join(',')
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem('jwt')}`,
+                        },
+                        timeout: API_CONFIG.TIMEOUT
+                    }
+                )
+                console.log('파일 일괄 삭제 성공')
+            }
+
+            // 삭제 성공 후 목록 갱신
+            await getFolderData(currentFolder.value.id)
+            await getObjectsData(currentFolder.value.id)
+
+            selectedFolders.value.clear()
+            selectedItems.value.clear()
+
+            confirmMsg.value = '선택한 항목이 삭제되었습니다.'
+            confirmTitle.value = '삭제 완료'
+            isConfirmPopupVisible.value = true
+        } catch (error) {
+            console.error('일괄 삭제 실패:', error)
+            confirmMsg.value = '삭제에 실패했습니다.'
+            confirmTitle.value = '삭제 실패'
+            isConfirmPopupVisible.value = true
+        } finally {
+            isBulkDelete.value = false
+        }
+        return
+    }
+
+    // 단일 항목 삭제 처리
+    if (itemToDelete.value) {
+        const item = itemToDelete.value
+
+        // 폴더 삭제
+        if ('folderName' in item) {
+            try {
+                await axios.post(
+                    getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_DELETE),
+                    {
+                        folderIds: item.id.toString()
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem('jwt')}`,
+                        },
+                        timeout: API_CONFIG.TIMEOUT
+                    }
+                )
+
+                // 삭제 성공 후 목록 갱신
+                await getFolderData(currentFolder.value.id)
+                await getObjectsData(currentFolder.value.id)
+
+                confirmMsg.value = `"${item.folderName}"이(가) 삭제되었습니다.`
+                confirmTitle.value = '삭제 완료'
+                isConfirmPopupVisible.value = true
+            } catch (error) {
+                console.error('폴더 삭제 실패:', error)
+                confirmMsg.value = `삭제에 실패했습니다.`
+                confirmTitle.value = '삭제 실패'
+                isConfirmPopupVisible.value = true
+            }
+        }
+        // 파일 삭제
+        else {
+            try {
+                await axios.post(
+                    getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_DELETE),
+                    {
+                        objectIds: item.id.toString()
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem('jwt')}`,
+                        },
+                        timeout: API_CONFIG.TIMEOUT
+                    }
+                )
+
+                // 삭제 성공 후 목록 갱신
+                await getFolderData(currentFolder.value.id)
+                await getObjectsData(currentFolder.value.id)
+
+                confirmMsg.value = `"${item.originalFileName}"이(가) 삭제되었습니다.`
+                confirmTitle.value = '삭제 완료'
+                isConfirmPopupVisible.value = true
+            } catch (error) {
+                console.error('파일 삭제 실패:', error)
+                confirmMsg.value = `삭제에 실패했습니다.`
+                confirmTitle.value = '삭제 실패'
+                isConfirmPopupVisible.value = true
+            }
+        }
+
+        itemToDelete.value = null
+    }
 }
 
 const handleCancel = () => {
     console.log('취소됨')
     isConfirmPopupVisible.value = false
+    itemToDelete.value = null
+    isBulkDelete.value = false
 }
 
 const openUploadPopup = () => {
@@ -782,7 +867,8 @@ const getFolderData = async (folderId: number) => {
 // folderid 쿼리 파라미터 변경 감지
 watch(() => route.query.folderid, async (newFolderId) => {
     const folderId = Number(newFolderId) || 0
-    selectedItems.value.clear() // 선택 항목 초기화
+    selectedItems.value.clear() // 파일 선택 항목 초기화
+    selectedFolders.value.clear() // 폴더 선택 항목 초기화
     await getFolderData(folderId)
     await getObjectsData(folderId)
 }, { immediate: true })
