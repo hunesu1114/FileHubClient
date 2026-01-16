@@ -12,18 +12,18 @@
                         <div class="title-row">
                             <h1 class="page-title">휴지통</h1>
                         </div>
-                        <p class="page-subtitle">{{ fileCount }}개의 파일</p>
+                        <p class="page-subtitle">{{ fileCount + folders.length }}개의 항목</p>
                     </div>
 
                     <div class="header-right">
                         <!-- 휴지통 비우기 버튼 -->
-                        <button v-if="files?.length > 0" class="action-button empty-recycle-bin-button"
-                            @click="handleEmptyRecycleBin" title="휴지통 비우기">
+                        <button v-if="files?.length > 0 || folders?.length > 0"
+                            class="action-button empty-recycle-bin-button" @click="handleEmptyRecycleBin"
+                            title="휴지통 비우기">
                             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2"
                                     stroke-linecap="round" stroke-linejoin="round" />
-                                <path
-                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
                                     stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
                                 <line x1="10" y1="11" x2="10" y2="17" stroke="currentColor" stroke-width="2"
@@ -41,13 +41,12 @@
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <polyline points="23 4 23 10 17 10" stroke="currentColor" stroke-width="2"
                                         stroke-linecap="round" stroke-linejoin="round" />
-                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
                                 <span>복원</span>
                             </button>
-                            <button class="action-button delete-button" @click="handleBulkPermanentDelete"
-                                title="영구삭제">
+                            <button class="action-button delete-button" @click="handleBulkPermanentDelete" title="영구삭제">
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2"
                                         stroke-linecap="round" stroke-linejoin="round" />
@@ -108,12 +107,45 @@
                     <div class="files-area" :class="{ 'with-detail': selectedFile !== null }">
                         <!-- 파일 그리드 뷰 -->
                         <div v-if="viewMode === 'grid'" class="file-grid">
+                            <!-- 폴더 -->
+                            <div v-for="folder in folders" :key="`folder-${folder.id}`" class="file-card"
+                                :class="{ 'selected': selectedItems.has(folder.id) }" @click="selectFolder(folder)">
+                                <div class="file-checkbox-wrapper">
+                                    <input type="checkbox" :id="`folder-${folder.id}`"
+                                        :checked="selectedItems.has(folder.id)"
+                                        @click="toggleSelection(folder.id, $event)" class="file-checkbox" />
+                                    <label :for="`folder-${folder.id}`" class="checkbox-label" @click.stop></label>
+                                </div>
+
+                                <div class="file-thumbnail">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path
+                                            d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round" />
+                                    </svg>
+                                </div>
+
+                                <div class="file-info">
+                                    <h3 class="file-name">{{ folder.folderName }}</h3>
+                                    <p class="file-meta">폴더 <br> 삭제: {{ folder.deletedAt ?
+                                        folder.deletedAt.split(' ')[0] : '-' }}</p>
+                                </div>
+
+                                <button class="file-menu-button" @click.stop="openFolderMenu(folder, $event)">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="12" cy="12" r="1" stroke="currentColor" stroke-width="2" />
+                                        <circle cx="12" cy="5" r="1" stroke="currentColor" stroke-width="2" />
+                                        <circle cx="12" cy="19" r="1" stroke="currentColor" stroke-width="2" />
+                                    </svg>
+                                </button>
+                            </div>
+
                             <!-- 파일 -->
                             <div v-for="file in files" :key="file.id" class="file-card"
                                 :class="{ 'selected': selectedItems.has(file.id) }" @click="selectFile(file)">
                                 <div class="file-checkbox-wrapper">
-                                    <input type="checkbox" :id="`file-${file.id}`"
-                                        :checked="selectedItems.has(file.id)"
+                                    <input type="checkbox" :id="`file-${file.id}`" :checked="selectedItems.has(file.id)"
                                         @click="toggleSelection(file.id, $event)" class="file-checkbox" />
                                     <label :for="`file-${file.id}`" class="checkbox-label" @click.stop></label>
                                 </div>
@@ -137,7 +169,7 @@
 
                                 <div class="file-info">
                                     <h3 class="file-name">{{ file.originalFileName }}</h3>
-                                    <p class="file-meta">{{ formatFileSize(file.size) }} • 삭제: {{ file.deletedAt ?
+                                    <p class="file-meta">{{ formatFileSize(file.size) }} <br> 삭제: {{ file.deletedAt ?
                                         file.deletedAt.split(' ')[0] : '-' }}</p>
                                 </div>
 
@@ -161,13 +193,45 @@
                                 <div class="col-actions"></div>
                             </div>
 
+                            <!-- 폴더 목록 -->
+                            <div v-for="folder in folders" :key="`folder-${folder.id}`" class="list-item"
+                                :class="{ 'selected': selectedItems.has(folder.id) }" @click="selectFolder(folder)">
+                                <div class="col-checkbox">
+                                    <input type="checkbox" :id="`list-folder-${folder.id}`"
+                                        :checked="selectedItems.has(folder.id)"
+                                        @click="toggleSelection(folder.id, $event)" class="list-checkbox" />
+                                    <label :for="`list-folder-${folder.id}`" class="checkbox-label" @click.stop></label>
+                                </div>
+                                <div class="col-name">
+                                    <svg class="file-icon" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path
+                                            d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                                            stroke="currentColor" stroke-width="2" />
+                                    </svg>
+                                    <span>{{ folder.folderName }}</span>
+                                </div>
+                                <div class="col-size">—</div>
+                                <div class="col-date">{{ folder.deletedAt ? folder.deletedAt.split(' ')[0] : '-' }}
+                                </div>
+                                <div class="col-actions">
+                                    <button class="list-menu-button" @click.stop="openFolderMenu(folder, $event)">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="12" cy="12" r="1" stroke="currentColor" stroke-width="2" />
+                                            <circle cx="19" cy="12" r="1" stroke="currentColor" stroke-width="2" />
+                                            <circle cx="5" cy="12" r="1" stroke="currentColor" stroke-width="2" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
                             <!-- 파일 목록 -->
                             <div v-for="file in files" :key="file.id" class="list-item"
                                 :class="{ 'selected': selectedItems.has(file.id) }" @click="selectFile(file)">
                                 <div class="col-checkbox">
                                     <input type="checkbox" :id="`list-file-${file.id}`"
-                                        :checked="selectedItems.has(file.id)"
-                                        @click="toggleSelection(file.id, $event)" class="list-checkbox" />
+                                        :checked="selectedItems.has(file.id)" @click="toggleSelection(file.id, $event)"
+                                        class="list-checkbox" />
                                     <label :for="`list-file-${file.id}`" class="checkbox-label" @click.stop></label>
                                 </div>
                                 <div class="col-name">
@@ -194,12 +258,11 @@
                         </div>
 
                         <!-- 빈 상태 -->
-                        <div v-if="files?.length === 0" class="empty-state">
+                        <div v-if="files?.length === 0 && folders?.length === 0" class="empty-state">
                             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2"
                                     stroke-linecap="round" stroke-linejoin="round" />
-                                <path
-                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
                                     stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
                             </svg>
@@ -213,8 +276,7 @@
                 </div>
             </main>
 
-            <UploadPopup v-if="isUploadPopupVisible" :folder-id="0" @close="closeUploadPopup"
-                @upload="handleUpload" />
+            <UploadPopup v-if="isUploadPopupVisible" :folder-id="0" @close="closeUploadPopup" @upload="handleUpload" />
             <FolderCreatePopup v-if="isFolderCreatePopupVisible" @close="closeFolderCreatePopup"
                 @create="createFolder" />
             <ConfirmPopup v-if="isConfirmPopupVisible" @confirm="handleConfirm" @cancel="handleCancel"
@@ -249,6 +311,15 @@ interface FileData {
     type?: string
 }
 
+interface FolderData {
+    id: number
+    folderName: string
+    createdAt: string
+    deletedAt?: string
+    parentFolderId?: number
+    hierarchy?: string
+}
+
 const viewMode = ref<'grid' | 'list'>('grid')
 const sortBy = ref('name')
 const isUploadPopupVisible = ref(false)
@@ -258,6 +329,7 @@ const confirmMsg = ref<string>('')
 const confirmType = ref<string>('success')
 const showCancelButton = ref(true)
 const files = ref<FileData[]>([])
+const folders = ref<FolderData[]>([])
 const fileCount = ref(0)
 
 // 체크박스 선택 관련
@@ -309,6 +381,13 @@ const selectFile = (file: FileData) => {
 }
 
 /**
+ * 폴더 선택 (단일 선택) - 상세정보 패널에 표시
+ */
+const selectFolder = (folder: FolderData) => {
+    selectedFile.value = folder as any
+}
+
+/**
  * 상세정보 패널 닫기
  */
 const closeDetailPanel = () => {
@@ -323,6 +402,19 @@ const openFileMenu = (file: FileData, event: MouseEvent) => {
     event.stopPropagation()
 
     contextMenuTarget.value = file
+    contextMenuX.value = event.clientX
+    contextMenuY.value = event.clientY
+    isContextMenuVisible.value = true
+}
+
+/**
+ * 폴더 컨텍스트 메뉴 열기
+ */
+const openFolderMenu = (folder: FolderData, event: MouseEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    contextMenuTarget.value = folder as any
     contextMenuX.value = event.clientX
     contextMenuY.value = event.clientY
     isContextMenuVisible.value = true
@@ -345,7 +437,7 @@ const handleEmptyRecycleBin = () => {
     confirmType.value = 'warning'
     showCancelButton.value = true
     isConfirmPopupVisible.value = true
-    
+
     // TODO: API 호출 구현
     // await axios.delete(getApiUrl(API_CONFIG.ENDPOINTS.API_RECYCLE_BIN_EMPTY), {
     //     headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` }
@@ -357,20 +449,20 @@ const handleEmptyRecycleBin = () => {
  */
 const handleRestore = async (item: FileData) => {
     console.log('복원:', item)
-    
+
     // TODO: API 호출 구현
     // await axios.post(getApiUrl(API_CONFIG.ENDPOINTS.API_RECYCLE_BIN_RESTORE), {
     //     objectIds: [item.id]
     // }, {
     //     headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` }
     // })
-    
+
     confirmTitle.value = '복원 완료'
     confirmMsg.value = `"${item.originalFileName}"이(가) 복원되었습니다.`
     confirmType.value = 'success'
     showCancelButton.value = false
     isConfirmPopupVisible.value = true
-    
+
     // 목록 갱신
     await getRecycleBinFiles()
 }
@@ -380,19 +472,19 @@ const handleRestore = async (item: FileData) => {
  */
 const handlePermanentDelete = async (item: FileData) => {
     console.log('영구삭제:', item)
-    
+
     // TODO: API 호출 구현
     // await axios.delete(getApiUrl(API_CONFIG.ENDPOINTS.API_RECYCLE_BIN_PERMANENT_DELETE), {
     //     data: { objectIds: [item.id] },
     //     headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` }
     // })
-    
+
     confirmTitle.value = '영구삭제 완료'
     confirmMsg.value = `"${item.originalFileName}"이(가) 영구적으로 삭제되었습니다.`
     confirmType.value = 'success'
     showCancelButton.value = false
     isConfirmPopupVisible.value = true
-    
+
     // 목록 갱신
     await getRecycleBinFiles()
 }
@@ -402,20 +494,20 @@ const handlePermanentDelete = async (item: FileData) => {
  */
 const handleBulkRestore = async () => {
     console.log('일괄 복원:', Array.from(selectedItems.value))
-    
+
     // TODO: API 호출 구현
     // await axios.post(getApiUrl(API_CONFIG.ENDPOINTS.API_RECYCLE_BIN_RESTORE), {
     //     objectIds: Array.from(selectedItems.value)
     // }, {
     //     headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` }
     // })
-    
+
     confirmTitle.value = '복원 완료'
     confirmMsg.value = `선택한 ${selectedItems.value.size}개 항목이 복원되었습니다.`
     confirmType.value = 'success'
     showCancelButton.value = false
     isConfirmPopupVisible.value = true
-    
+
     selectedItems.value.clear()
     // 목록 갱신
     await getRecycleBinFiles()
@@ -430,7 +522,7 @@ const handleBulkPermanentDelete = async () => {
     confirmType.value = 'warning'
     showCancelButton.value = true
     isConfirmPopupVisible.value = true
-    
+
     // TODO: API 호출 구현 (확인 후 실행)
     // await axios.delete(getApiUrl(API_CONFIG.ENDPOINTS.API_RECYCLE_BIN_PERMANENT_DELETE), {
     //     data: { objectIds: Array.from(selectedItems.value) },
@@ -477,46 +569,37 @@ const createFolder = (folderName: string) => {
 }
 
 /**
- * 휴지통 파일 목록 가져오기 - API 호출 함수 껍데기
+ * 휴지통 파일 목록 가져오기
  */
 const getRecycleBinFiles = async () => {
     try {
-        // TODO: 실제 API 엔드포인트로 교체
-        // await axios.get(
-        //     getApiUrl(API_CONFIG.ENDPOINTS.API_RECYCLE_BIN_FILES),
-        //     {
-        //         headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
-        //         timeout: API_CONFIG.TIMEOUT
-        //     }
-        // ).then(res => {
-        //     files.value = res.data.data
-        //     fileCount.value = files.value?.length || 0
-        // })
-        
-        // 임시 데이터 (개발용)
-        files.value = [
+        // 삭제된 폴더 가져오기
+        await axios.get(
+            getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_GETDELETEDDATA),
             {
-                id: 1,
-                originalFileName: '삭제된파일1.pdf',
-                size: 1024,
-                createdAt: '2026-01-10 14:30:00',
-                deletedAt: '2026-01-13 10:20:00',
-                location: '내 드라이브/문서',
-                type: 'pdf'
-            },
-            {
-                id: 2,
-                originalFileName: '삭제된이미지.jpg',
-                size: 2048,
-                createdAt: '2026-01-05 09:15:00',
-                deletedAt: '2026-01-12 16:45:00',
-                location: '내 드라이브/사진',
-                type: 'image'
+                headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
+                timeout: API_CONFIG.TIMEOUT
             }
-        ]
-        fileCount.value = files.value?.length || 0
+        ).then(res => {
+            folders.value = res.data.data || []
+        })
+
+        // 삭제된 파일 가져오기
+        await axios.get(
+            getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_GETDELETEDDATA),
+            {
+                headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
+                timeout: API_CONFIG.TIMEOUT
+            }
+        ).then(res => {
+            files.value = res.data.data || []
+            fileCount.value = files.value?.length || 0
+        })
     } catch (error) {
         console.error('휴지통 파일 목록 가져오기 실패:', error)
+        files.value = []
+        folders.value = []
+        fileCount.value = 0
     }
 }
 

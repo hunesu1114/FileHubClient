@@ -9,11 +9,13 @@ export const API_CONFIG = {
     API_FILES_DOWNLOAD: '/files/download',
     API_FILES_DOWNLOAD_MULTIPLE: '/files/download/multiple',
     API_FILES_DELETE: '/files/delete',
+    API_FILES_GETDELETEDDATA: '/files/getDeletedData',
     API_FOLDER_CREATE: '/folder/create',
     API_FOLDER_GETDATA: '/folder/getData',
     API_FOLDER_GETROOTFOLDERID: '/folder/getRootFolderId',
     API_FOLDERS_GETTREE: '/folder/getTree',
     API_FOLDER_DELETE: '/folder/delete',
+    API_FOLDER_GETDELETEDDATA: '/folder/getDeletedData',
   },
   TIMEOUT: 30000, // 30초
 } as const

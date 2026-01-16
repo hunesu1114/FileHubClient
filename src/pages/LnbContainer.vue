@@ -80,11 +80,13 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import { API_CONFIG, getApiUrl } from '@/config/api'
-import { useRouter,useRoute } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import FolderTreeItem from '@/component/FolderTreeItem.vue'
+import { useRecycleBinStore } from '@/stores/recycleBin'
 
 const router = useRouter()
 const route = useRoute()
+const recycleBinStore = useRecycleBinStore()
 
 interface FolderItem {
     id: number
@@ -102,7 +104,7 @@ const isCollapsed = ref(false)
 const usedStorage = ref('15.2 GB')
 const totalStorage = ref('50 GB')
 const isAllFilesExpanded = ref(true)
-const currentPath = ref<string>(route.path.split('?')[0]??'')
+const currentPath = ref<string>(route.path.split('?')[0] ?? '')
 
 const storagePercentage = computed(() => {
     const used = parseFloat(usedStorage.value)
@@ -123,7 +125,7 @@ const emit = defineEmits<{
 }>()
 
 // 전체 파일 외의 빠른 접근 항목들
-const otherQuickAccessItems = ref([
+const otherQuickAccessItems = computed(() => [
     {
         id: 2,
         label: '최근 항목',
@@ -150,7 +152,7 @@ const otherQuickAccessItems = ref([
         label: '휴지통',
         path: '/bucket/recycle-bin',
         icon: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
-        count: 3
+        count: recycleBinStore.count || null
     }
 ])
 
@@ -220,6 +222,7 @@ const navigateToMenu = (path: string) => {
 
 onMounted(async () => {
     await getFolderTree()
+    await recycleBinStore.fetchCount()
 })
 </script>
 

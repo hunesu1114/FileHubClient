@@ -294,6 +294,9 @@ import axios from 'axios'
 import { API_CONFIG, getApiUrl } from '@/config/api'
 import FolderCreatePopup from './FolderCreatePopup.vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useRecycleBinStore } from '@/stores/recycleBin'
+
+const recycleBinStore = useRecycleBinStore()
 
 // 타입 정의
 interface FileData {
@@ -616,6 +619,9 @@ const handleConfirm = async () => {
             await getFolderData(currentFolder.value.id)
             await getObjectsData(currentFolder.value.id)
 
+            // 휴지통 카운트 업데이트
+            await recycleBinStore.fetchCount()
+
             selectedFolders.value.clear()
             selectedItems.value.clear()
 
@@ -657,6 +663,9 @@ const handleConfirm = async () => {
                 await getFolderData(currentFolder.value.id)
                 await getObjectsData(currentFolder.value.id)
 
+                // 휴지통 카운트 업데이트
+                await recycleBinStore.fetchCount()
+
                 confirmMsg.value = `"${item.folderName}"이(가) 삭제되었습니다.`
                 confirmTitle.value = '삭제 완료'
                 isConfirmPopupVisible.value = true
@@ -686,6 +695,9 @@ const handleConfirm = async () => {
                 // 삭제 성공 후 목록 갱신
                 await getFolderData(currentFolder.value.id)
                 await getObjectsData(currentFolder.value.id)
+
+                // 휴지통 카운트 업데이트
+                await recycleBinStore.fetchCount()
 
                 confirmMsg.value = `"${item.originalFileName}"이(가) 삭제되었습니다.`
                 confirmTitle.value = '삭제 완료'
