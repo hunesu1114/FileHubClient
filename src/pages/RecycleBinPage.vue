@@ -35,8 +35,8 @@
                         </button>
 
                         <!-- 선택된 항목 액션 버튼 -->
-                        <div v-if="selectedItems.size > 0" class="selection-actions">
-                            <span class="selection-count">{{ selectedItems.size }}개 선택됨</span>
+                        <div v-if="selectedFiles.size + selectedFolders.size > 0" class="selection-actions">
+                            <span class="selection-count">{{ selectedFiles.size + selectedFolders.size }}개 선택됨</span>
                             <button class="action-button restore-button" @click="handleBulkRestore" title="복원">
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <polyline points="23 4 23 10 17 10" stroke="currentColor" stroke-width="2"
@@ -109,11 +109,11 @@
                         <div v-if="viewMode === 'grid'" class="file-grid">
                             <!-- 폴더 -->
                             <div v-for="folder in folders" :key="`folder-${folder.id}`" class="file-card"
-                                :class="{ 'selected': selectedItems.has(folder.id) }" @click="selectFolder(folder)">
+                                :class="{ 'selected': selectedFolders.has(folder.id) }" @click="selectFolder(folder)">
                                 <div class="file-checkbox-wrapper">
                                     <input type="checkbox" :id="`folder-${folder.id}`"
-                                        :checked="selectedItems.has(folder.id)"
-                                        @click="toggleSelection(folder.id, $event)" class="file-checkbox" />
+                                        :checked="selectedFolders.has(folder.id)"
+                                        @click="toggleFolderSelection(folder.id, $event)" class="file-checkbox" />
                                     <label :for="`folder-${folder.id}`" class="checkbox-label" @click.stop></label>
                                 </div>
 
@@ -143,10 +143,10 @@
 
                             <!-- 파일 -->
                             <div v-for="file in files" :key="file.id" class="file-card"
-                                :class="{ 'selected': selectedItems.has(file.id) }" @click="selectFile(file)">
+                                :class="{ 'selected': selectedFiles.has(file.id) }" @click="selectFile(file)">
                                 <div class="file-checkbox-wrapper">
-                                    <input type="checkbox" :id="`file-${file.id}`" :checked="selectedItems.has(file.id)"
-                                        @click="toggleSelection(file.id, $event)" class="file-checkbox" />
+                                    <input type="checkbox" :id="`file-${file.id}`" :checked="selectedFiles.has(file.id)"
+                                        @click="toggleFileSelection(file.id, $event)" class="file-checkbox" />
                                     <label :for="`file-${file.id}`" class="checkbox-label" @click.stop></label>
                                 </div>
 
@@ -195,11 +195,11 @@
 
                             <!-- 폴더 목록 -->
                             <div v-for="folder in folders" :key="`folder-${folder.id}`" class="list-item"
-                                :class="{ 'selected': selectedItems.has(folder.id) }" @click="selectFolder(folder)">
+                                :class="{ 'selected': selectedFolders.has(folder.id) }" @click="selectFolder(folder)">
                                 <div class="col-checkbox">
                                     <input type="checkbox" :id="`list-folder-${folder.id}`"
-                                        :checked="selectedItems.has(folder.id)"
-                                        @click="toggleSelection(folder.id, $event)" class="list-checkbox" />
+                                        :checked="selectedFolders.has(folder.id)"
+                                        @click="toggleFolderSelection(folder.id, $event)" class="list-checkbox" />
                                     <label :for="`list-folder-${folder.id}`" class="checkbox-label" @click.stop></label>
                                 </div>
                                 <div class="col-name">
@@ -227,10 +227,10 @@
 
                             <!-- 파일 목록 -->
                             <div v-for="file in files" :key="file.id" class="list-item"
-                                :class="{ 'selected': selectedItems.has(file.id) }" @click="selectFile(file)">
+                                :class="{ 'selected': selectedFiles.has(file.id) }" @click="selectFile(file)">
                                 <div class="col-checkbox">
                                     <input type="checkbox" :id="`list-file-${file.id}`"
-                                        :checked="selectedItems.has(file.id)" @click="toggleSelection(file.id, $event)"
+                                        :checked="selectedFiles.has(file.id)" @click="toggleFileSelection(file.id, $event)"
                                         class="list-checkbox" />
                                     <label :for="`list-file-${file.id}`" class="checkbox-label" @click.stop></label>
                                 </div>
@@ -333,7 +333,8 @@ const folders = ref<FolderData[]>([])
 const fileCount = ref(0)
 
 // 체크박스 선택 관련
-const selectedItems = ref<Set<number>>(new Set())
+const selectedFiles = ref<Set<number>>(new Set())
+const selectedFolders = ref<Set<number>>(new Set())
 const selectedFile = ref<FileData | null>(null)
 
 // 컨텍스트 메뉴 관련
@@ -362,14 +363,26 @@ const formatFileSize = (sizeInKB: number): string => {
 }
 
 /**
- * 체크박스 토글
+ * 파일 체크박스 토글
  */
-const toggleSelection = (id: number, event: Event) => {
+const toggleFileSelection = (id: number, event: Event) => {
     event.stopPropagation()
-    if (selectedItems.value.has(id)) {
-        selectedItems.value.delete(id)
+    if (selectedFiles.value.has(id)) {
+        selectedFiles.value.delete(id)
     } else {
-        selectedItems.value.add(id)
+        selectedFiles.value.add(id)
+    }
+}
+
+/**
+ * 폴더 체크박스 토글
+ */
+const toggleFolderSelection = (id: number, event: Event) => {
+    event.stopPropagation()
+    if (selectedFolders.value.has(id)) {
+        selectedFolders.value.delete(id)
+    } else {
+        selectedFolders.value.add(id)
     }
 }
 
@@ -543,22 +556,28 @@ const handlePermanentDelete = async (item: FileData) => {
  * 일괄 복원 처리 - API 호출 함수 껍데기
  */
 const handleBulkRestore = async () => {
-    console.log('일괄 복원:', Array.from(selectedItems.value))
+    const totalSelected = selectedFiles.value.size + selectedFolders.value.size
+    console.log('일괄 복원:', {
+        files: Array.from(selectedFiles.value),
+        folders: Array.from(selectedFolders.value)
+    })
 
     // TODO: API 호출 구현
     // await axios.post(getApiUrl(API_CONFIG.ENDPOINTS.API_RECYCLE_BIN_RESTORE), {
-    //     objectIds: Array.from(selectedItems.value)
+    //     fileIds: Array.from(selectedFiles.value),
+    //     folderIds: Array.from(selectedFolders.value)
     // }, {
     //     headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` }
     // })
 
     confirmTitle.value = '복원 완료'
-    confirmMsg.value = `선택한 ${selectedItems.value.size}개 항목이 복원되었습니다.`
+    confirmMsg.value = `선택한 ${totalSelected}개 항목이 복원되었습니다.`
     confirmType.value = 'success'
     showCancelButton.value = false
     isConfirmPopupVisible.value = true
 
-    selectedItems.value.clear()
+    selectedFiles.value.clear()
+    selectedFolders.value.clear()
     // 목록 갱신
     await getRecycleBinFiles()
 }
@@ -567,15 +586,19 @@ const handleBulkRestore = async () => {
  * 일괄 영구삭제 처리 - API 호출 함수 껍데기
  */
 const handleBulkPermanentDelete = async () => {
+    const totalSelected = selectedFiles.value.size + selectedFolders.value.size
     confirmTitle.value = '영구삭제 확인'
-    confirmMsg.value = `선택한 ${selectedItems.value.size}개 항목을 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
+    confirmMsg.value = `선택한 ${totalSelected}개 항목을 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
     confirmType.value = 'warning'
     showCancelButton.value = true
     isConfirmPopupVisible.value = true
 
     // TODO: API 호출 구현 (확인 후 실행)
     // await axios.delete(getApiUrl(API_CONFIG.ENDPOINTS.API_RECYCLE_BIN_PERMANENT_DELETE), {
-    //     data: { objectIds: Array.from(selectedItems.value) },
+    //     data: { 
+    //         fileIds: Array.from(selectedFiles.value),
+    //         folderIds: Array.from(selectedFolders.value)
+    //     },
     //     headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` }
     // })
 }
