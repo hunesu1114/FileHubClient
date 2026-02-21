@@ -230,8 +230,8 @@
                                 :class="{ 'selected': selectedFiles.has(file.id) }" @click="selectFile(file)">
                                 <div class="col-checkbox">
                                     <input type="checkbox" :id="`list-file-${file.id}`"
-                                        :checked="selectedFiles.has(file.id)" @click="toggleFileSelection(file.id, $event)"
-                                        class="list-checkbox" />
+                                        :checked="selectedFiles.has(file.id)"
+                                        @click="toggleFileSelection(file.id, $event)" class="list-checkbox" />
                                     <label :for="`list-file-${file.id}`" class="checkbox-label" @click.stop></label>
                                 </div>
                                 <div class="col-name">
@@ -318,6 +318,7 @@ interface FolderData {
     deletedAt?: string
     parentFolderId?: number
     hierarchy?: string
+    type?: string
 }
 
 const viewMode = ref<'grid' | 'list'>('grid')
@@ -326,7 +327,7 @@ const isUploadPopupVisible = ref(false)
 const isConfirmPopupVisible = ref(false)
 const confirmTitle = ref<string>('')
 const confirmMsg = ref<string>('')
-const confirmType = ref<string>('success')
+const confirmType = ref<'info' | 'success' | 'warning' | 'danger' | 'question'>('success')
 const showCancelButton = ref(true)
 const files = ref<FileData[]>([])
 const folders = ref<FolderData[]>([])
@@ -341,7 +342,7 @@ const selectedFile = ref<FileData | null>(null)
 const isContextMenuVisible = ref(false)
 const contextMenuX = ref(0)
 const contextMenuY = ref(0)
-const contextMenuTarget = ref<FileData | null>(null)
+const contextMenuTarget = ref<FileData | FolderData | null>(null)
 
 /**
  * 파일 크기를 KB, MB, GB 단위로 변환합니다.
@@ -414,7 +415,8 @@ const openFileMenu = (file: FileData, event: MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
 
-    contextMenuTarget.value = file
+    contextMenuTarget.value = file as FileData
+    contextMenuTarget.value.type = "file"
     contextMenuX.value = event.clientX
     contextMenuY.value = event.clientY
     isContextMenuVisible.value = true
@@ -427,7 +429,8 @@ const openFolderMenu = (folder: FolderData, event: MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
 
-    contextMenuTarget.value = folder as any
+    contextMenuTarget.value = folder as FolderData
+    contextMenuTarget.value.type = "folder"
     contextMenuX.value = event.clientX
     contextMenuY.value = event.clientY
     isContextMenuVisible.value = true
@@ -460,23 +463,25 @@ const handleEmptyRecycleBin = () => {
 /**
  * 복원 처리 - API 호출 함수 껍데기
  */
-const handleRestore = async (item: FileData) => {
+const handleRestore = async (item: FileData | FolderData) => {
     // TODO : 중복 파일명 체크 후 confirm 후 복원 or 취소
+    const itemName = item.type === "folder" ? (item as FolderData).folderName : (item as FileData).originalFileName
     await axios.get(
         getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_GETISDUPLICATEDFILENAME),
         {
             headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
             timeout: API_CONFIG.TIMEOUT,
             params: {
-                fileId: item.id.toString()
+                type: item.type === "folder" ? "folder" : "file",
+                itemId: item.id.toString()
             }
         }
     ).then(async res => {
         if (res.data.data) {
-            confirmTitle.value = '파일명 중복'
-            confirmMsg.value = `"${item.originalFileName}"과(와) 동일한 이름의 파일이 이미 존재합니다. 덮어쓰시겠습니까? (복원 시 복원할 파일의 이전 version은 영구삭제 됩니다.)`
-            confirmType.value = 'error'
-            showCancelButton.value = false
+            confirmTitle.value = '파일/폴더명 중복'
+            confirmMsg.value = `"${itemName}"과(와) 동일한 이름의 파일/폴더가 이미 존재합니다. 덮어쓰시겠습니까? (복원 시 복원할 파일의 이전 version은 영구삭제 됩니다.)`
+            confirmType.value = 'warning'
+            showCancelButton.value = true
             isConfirmPopupVisible.value = true
             // await axios.post(
             //     getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_RESTORE),
@@ -489,7 +494,7 @@ const handleRestore = async (item: FileData) => {
             // ).then(res => {
             //     if (res.data.status == 'Success') {
             //         confirmTitle.value = '복원 완료'
-            //         confirmMsg.value = `"${item.originalFileName}"이(가) 복원되었습니다.`
+            //         confirmMsg.value = `"${itemName}"이(가) 복원되었습니다.`
             //         confirmType.value = 'success'
             //         showCancelButton.value = false
             //         isConfirmPopupVisible.value = true
@@ -508,7 +513,7 @@ const handleRestore = async (item: FileData) => {
                 ).then(res => {
                     if (res.data.status == 'Success') {
                         confirmTitle.value = '복원 완료'
-                        confirmMsg.value = `"${item.originalFileName}"이(가) 복원되었습니다.`
+                        confirmMsg.value = `"${itemName}"이(가) 복원되었습니다.`
                         confirmType.value = 'success'
                         showCancelButton.value = false
                         isConfirmPopupVisible.value = true

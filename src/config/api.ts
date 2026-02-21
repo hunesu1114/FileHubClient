@@ -10,7 +10,7 @@ export const API_CONFIG = {
     API_FILES_DOWNLOAD_MULTIPLE: '/files/download/multiple',
     API_FILES_DELETE: '/files/delete',
     API_FILES_GETDELETEDDATA: '/files/getDeletedData',
-    API_FILES_GETISDUPLICATEDFILENAME: '/files/getDuplicatedFileName',
+    API_FILES_GETISDUPLICATEDFILENAME: '/files/getIsDuplicateFilename',
     API_FILES_RESTORE: '/files/restore',
     API_FOLDER_CREATE: '/folder/create',
     API_FOLDER_GETDATA: '/folder/getData',
