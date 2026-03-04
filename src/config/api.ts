@@ -12,12 +12,14 @@ export const API_CONFIG = {
     API_FILES_GETDELETEDDATA: '/files/getDeletedData',
     API_FILES_GETISDUPLICATEDFILENAME: '/files/getIsDuplicateFilename',
     API_FILES_RESTORE: '/files/restore',
+    API_FILES_HARD_DELETE: '/files/hardDelete',
     API_FOLDER_CREATE: '/folder/create',
     API_FOLDER_GETDATA: '/folder/getData',
     API_FOLDER_GETROOTFOLDERID: '/folder/getRootFolderId',
     API_FOLDERS_GETTREE: '/folder/getTree',
     API_FOLDER_DELETE: '/folder/delete',
     API_FOLDER_GETDELETEDDATA: '/folder/getDeletedData',
+    API_FOLDER_HARD_DELETE: '/folder/hardDelete',
   },
   TIMEOUT: 30000, // 30초
 } as const

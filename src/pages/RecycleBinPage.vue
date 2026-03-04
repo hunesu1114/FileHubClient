@@ -445,19 +445,56 @@ const closeContextMenu = () => {
 }
 
 /**
- * 휴지통 비우기 - API 호출 함수 껍데기
+ * 휴지통 비우기
  */
-const handleEmptyRecycleBin = () => {
+const handleEmptyRecycleBin = async () => {
     confirmTitle.value = '휴지통 비우기'
     confirmMsg.value = '휴지통의 모든 파일을 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.'
     confirmType.value = 'warning'
     showCancelButton.value = true
     isConfirmPopupVisible.value = true
 
-    // TODO: API 호출 구현
-    // await axios.delete(getApiUrl(API_CONFIG.ENDPOINTS.API_RECYCLE_BIN_EMPTY), {
-    //     headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` }
-    // })
+    const folderIds = folders.value.map(f => f.id)
+    const fileIds = files.value.map(f => f.id)
+
+    try {
+        const requests = []
+        if (folderIds.length > 0) {
+            requests.push(axios.post(getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_HARD_DELETE),
+                { objectIds: folderIds },
+                { headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` } }
+            ))
+        }
+        if (fileIds.length > 0) {
+            requests.push(axios.post(getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_HARD_DELETE),
+                { objectIds: fileIds },
+                { headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` } }
+            ))
+        }
+
+        const results = await Promise.all(requests)
+        const failedRes = results.find(res => res.data.status !== 'Success')
+
+        if (failedRes) {
+            confirmTitle.value = '휴지통 비우기 실패'
+            confirmMsg.value = failedRes.data.message || '삭제 중 오류가 발생했습니다.'
+            confirmType.value = 'danger'
+        } else {
+            confirmTitle.value = '휴지통 비우기 완료'
+            confirmMsg.value = `${folderIds.length}개의 폴더와 ${fileIds.length}개의 파일이 영구적으로 삭제되었습니다.`
+            confirmType.value = 'success'
+        }
+        showCancelButton.value = false
+        isConfirmPopupVisible.value = true
+    } catch {
+        confirmTitle.value = '휴지통 비우기 실패'
+        confirmMsg.value = '삭제 중 오류가 발생했습니다.'
+        confirmType.value = 'danger'
+        showCancelButton.value = false
+        isConfirmPopupVisible.value = true
+    }
+
+    await getRecycleBinFiles()
 }
 
 /**
@@ -522,7 +559,7 @@ const handleRestore = async (item: FileData | FolderData) => {
             } else {
                 confirmTitle.value = '복원 실패'
                 confirmMsg.value = res.data.message || '파일 복원 중 오류가 발생했습니다.'
-                confirmType.value = 'error'
+                confirmType.value = 'danger'
                 showCancelButton.value = false
                 isConfirmPopupVisible.value = true
                 throw new Error('복원 실패')
@@ -536,20 +573,29 @@ const handleRestore = async (item: FileData | FolderData) => {
 }
 
 /**
- * 영구삭제 처리 - API 호출 함수 껍데기
+ * 영구삭제 처리
  */
-const handlePermanentDelete = async (item: FileData) => {
-    console.log('영구삭제:', item)
+const handlePermanentDelete = async (item: FileData | FolderData) => {
+    const isFolder = item.type === 'folder'
+    const itemName = isFolder ? (item as FolderData).folderName : (item as FileData).originalFileName
+    const endpoint = isFolder
+        ? API_CONFIG.ENDPOINTS.API_FOLDER_HARD_DELETE
+        : API_CONFIG.ENDPOINTS.API_FILES_HARD_DELETE
 
-    // TODO: API 호출 구현
-    // await axios.delete(getApiUrl(API_CONFIG.ENDPOINTS.API_RECYCLE_BIN_PERMANENT_DELETE), {
-    //     data: { objectIds: [item.id] },
-    //     headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` }
-    // })
+    const res = await axios.post(getApiUrl(endpoint),
+        { objectIds: [item.id] },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` } }
+    )
 
-    confirmTitle.value = '영구삭제 완료'
-    confirmMsg.value = `"${item.originalFileName}"이(가) 영구적으로 삭제되었습니다.`
-    confirmType.value = 'success'
+    if (res.data.status === 'Success') {
+        confirmTitle.value = '영구삭제 완료'
+        confirmMsg.value = `"${itemName}"이(가) 영구적으로 삭제되었습니다.`
+        confirmType.value = 'success'
+    } else {
+        confirmTitle.value = '영구삭제 실패'
+        confirmMsg.value = res.data.message || '영구삭제 중 오류가 발생했습니다.'
+        confirmType.value = 'danger'
+    }
     showCancelButton.value = false
     isConfirmPopupVisible.value = true
 
@@ -588,24 +634,57 @@ const handleBulkRestore = async () => {
 }
 
 /**
- * 일괄 영구삭제 처리 - API 호출 함수 껍데기
+ * 일괄 영구삭제 처리
  */
 const handleBulkPermanentDelete = async () => {
-    const totalSelected = selectedFiles.value.size + selectedFolders.value.size
+    const selectedFolderCount = selectedFolders.value.size
+    const selectedFileCount = selectedFiles.value.size
+    const totalSelected = selectedFolderCount + selectedFileCount
+
     confirmTitle.value = '영구삭제 확인'
     confirmMsg.value = `선택한 ${totalSelected}개 항목을 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
     confirmType.value = 'warning'
     showCancelButton.value = true
     isConfirmPopupVisible.value = true
 
-    // TODO: API 호출 구현 (확인 후 실행)
-    // await axios.delete(getApiUrl(API_CONFIG.ENDPOINTS.API_RECYCLE_BIN_PERMANENT_DELETE), {
-    //     data: { 
-    //         fileIds: Array.from(selectedFiles.value),
-    //         folderIds: Array.from(selectedFolders.value)
-    //     },
-    //     headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` }
-    // })
+    const showError = (message?: string) => {
+        confirmTitle.value = '영구삭제 실패'
+        confirmMsg.value = message || '파일 영구삭제 중 오류가 발생했습니다.'
+        confirmType.value = 'danger'
+        showCancelButton.value = false
+        isConfirmPopupVisible.value = true
+    }
+
+    try {
+        const [folderRes, fileRes] = await Promise.all([
+            axios.post(getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_HARD_DELETE),
+                { objectIds: Array.from(selectedFolders.value) },
+                { headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` } }
+            ),
+            axios.post(getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_HARD_DELETE),
+                { objectIds: Array.from(selectedFiles.value) },
+                { headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` } }
+            )
+        ])
+
+        const failedRes = [folderRes, fileRes].find(res => res.data.status !== 'Success')
+        if (failedRes) {
+            showError(failedRes.data.message)
+            return
+        }
+
+        confirmTitle.value = '영구삭제 완료'
+        confirmMsg.value = `선택한 ${selectedFolderCount}개의 폴더와 ${selectedFileCount}개의 파일이 영구적으로 삭제되었습니다.`
+        confirmType.value = 'success'
+        showCancelButton.value = false
+        isConfirmPopupVisible.value = true
+    } catch {
+        showError()
+        return
+    }
+
+    // 목록 갱신
+    await getRecycleBinFiles()
 }
 
 const handleConfirm = () => {
