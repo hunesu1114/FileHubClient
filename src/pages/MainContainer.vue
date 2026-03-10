@@ -275,7 +275,7 @@
             <FolderCreatePopup v-if="isFolderCreatePopupVisible" @close="closeFolderCreatePopup"
                 @create="createFolder" />
             <ConfirmPopup v-if="isConfirmPopupVisible" @confirm="handleConfirm" @cancel="handleCancel"
-                :title="confirmTitle" :type="'success'" :showCancelButton="false" :message="confirmMsg" />
+                :title="confirmTitle" :type="confirmType" :showCancelButton="false" :message="confirmMsg" />
             <FileContextMenu :visible="isContextMenuVisible" :x="contextMenuX" :y="contextMenuY"
                 :target-item="contextMenuTarget" @close="closeContextMenu" @download="handleDownload"
                 @delete="handleDelete" @share="handleShare" @edit="handleEdit" />
@@ -333,6 +333,7 @@ const isUploadPopupVisible = ref(false)
 const isConfirmPopupVisible = ref()
 const confirmTitle = ref<string>('')
 const confirmMsg = ref<string>('')
+const confirmType = ref<'info' | 'success' | 'warning' | 'danger' | 'question'>('success')
 const files = ref<FileData[]>([])
 
 // 체크박스 선택 관련
@@ -483,6 +484,7 @@ const handleDelete = (item: FileData | FolderData) => {
     confirmMsg.value = `"${('originalFileName' in item ? item.originalFileName : item.folderName)}"을(를) 삭제하시겠습니까?`
     confirmTitle.value = '삭제 확인'
     isConfirmPopupVisible.value = true
+    confirmType.value = 'success'
 }
 
 /**
@@ -492,6 +494,7 @@ const handleShare = (item: FileData | FolderData) => {
     console.log('공유:', item)
     confirmMsg.value = `"${('originalFileName' in item ? item.originalFileName : item.folderName)}"의 공유 링크를 생성합니다.`
     confirmTitle.value = '공유'
+    confirmType.value = 'info'
     isConfirmPopupVisible.value = true
     // TODO: 실제 공유 로직 구현
 }
@@ -503,6 +506,7 @@ const handleEdit = (item: FileData | FolderData) => {
     console.log('수정:', item)
     confirmMsg.value = `"${('originalFileName' in item ? item.originalFileName : item.folderName)}"을(를) 수정합니다.`
     confirmTitle.value = '수정'
+    confirmType.value = 'info'
     isConfirmPopupVisible.value = true
     // TODO: 실제 수정 로직 구현
 }
@@ -515,6 +519,7 @@ const handleBulkDownload = async () => {
     console.log('일괄 다운로드 - 파일:', Array.from(selectedItems.value), '폴더:', Array.from(selectedFolders.value))
     confirmMsg.value = `선택한 ${totalCount}개 항목을 다운로드합니다.`
     confirmTitle.value = '일괄 다운로드'
+    confirmType.value = 'info'
     isConfirmPopupVisible.value = true
 
     await axios.get(
@@ -558,6 +563,7 @@ const handleBulkDelete = () => {
     const totalCount = selectedItems.value.size + selectedFolders.value.size
     confirmMsg.value = `선택한 ${totalCount}개 항목을 삭제하시겠습니까?`
     confirmTitle.value = '일괄 삭제 확인'
+    confirmType.value = 'danger'
     isBulkDelete.value = true
     isConfirmPopupVisible.value = true
 }
@@ -570,6 +576,7 @@ const handleBulkMove = () => {
     console.log('일괄 이동 - 파일:', Array.from(selectedItems.value), '폴더:', Array.from(selectedFolders.value))
     confirmMsg.value = `선택한 ${totalCount}개 항목을 이동합니다.`
     confirmTitle.value = '일괄 이동'
+    confirmType.value = 'info'
     isConfirmPopupVisible.value = true
     // TODO: 실제 일괄 이동 로직 구현 (폴더 선택 팝업 필요)
 }
@@ -627,11 +634,13 @@ const handleConfirm = async () => {
 
             confirmMsg.value = '선택한 항목이 삭제되었습니다.'
             confirmTitle.value = '삭제 완료'
+            confirmType.value = 'success'
             isConfirmPopupVisible.value = true
         } catch (error) {
             console.error('일괄 삭제 실패:', error)
             confirmMsg.value = '삭제에 실패했습니다.'
             confirmTitle.value = '삭제 실패'
+            confirmType.value = 'danger'
             isConfirmPopupVisible.value = true
         } finally {
             isBulkDelete.value = false
@@ -668,11 +677,13 @@ const handleConfirm = async () => {
 
                 confirmMsg.value = `"${item.folderName}"이(가) 삭제되었습니다.`
                 confirmTitle.value = '삭제 완료'
+                confirmType.value = 'success'
                 isConfirmPopupVisible.value = true
             } catch (error) {
                 console.error('폴더 삭제 실패:', error)
                 confirmMsg.value = `삭제에 실패했습니다.`
                 confirmTitle.value = '삭제 실패'
+                confirmType.value = 'danger'
                 isConfirmPopupVisible.value = true
             }
         }
@@ -701,11 +712,13 @@ const handleConfirm = async () => {
 
                 confirmMsg.value = `"${item.originalFileName}"이(가) 삭제되었습니다.`
                 confirmTitle.value = '삭제 완료'
+                confirmType.value = 'success'
                 isConfirmPopupVisible.value = true
             } catch (error) {
                 console.error('파일 삭제 실패:', error)
                 confirmMsg.value = `삭제에 실패했습니다.`
                 confirmTitle.value = '삭제 실패'
+                confirmType.value = 'danger'
                 isConfirmPopupVisible.value = true
             }
         }
@@ -736,6 +749,7 @@ const handleUpload = (uploadedFiles: File[]) => {
     getObjectsData(currentFolder.value.id)
     confirmMsg.value = `${uploadedFiles.length}개의 파일이 업로드되었습니다.`
     confirmTitle.value = '업로드 성공'
+    confirmType.value = 'success'
     isConfirmPopupVisible.value = true
     closeUploadPopup()
 }
@@ -750,37 +764,48 @@ const closeFolderCreatePopup = () => {
     isFolderCreatePopupVisible.value = false
 }
 
-const createFolder = (folderName: string) => {
-    console.log('새 폴더 생성:', folderName)
-    // TODO: 새 폴더 생성 처리 및 폴더 목록 갱신
-    axios.post(
-        getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_CREATE),
-        {
-            folderName: folderName,
-            parentFolderId: Number(currentFolder.value.id) || 0
-        },
-        {
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('jwt')}`, // 필요시 주석 해제
-            },
-            timeout: API_CONFIG.TIMEOUT
-        }
-    ).then(async (response) => {
-        console.log('폴더 생성 응답:', response.data)
+const createFolder = async (folderName: string) => {
+    closeFolderCreatePopup()
 
-        // 폴더 목록 갱신
+    // 현재 폴더의 하위 폴더 중 같은 이름 존재 여부 체크
+    const isDuplicate = currentFolder.value.childFolders.some(
+        f => f.folderName === folderName
+    )
+
+    if (isDuplicate) {
+        confirmTitle.value = '폴더 생성 불가'
+        confirmMsg.value = `"${folderName}" 폴더가 이미 존재합니다. 다른 이름을 사용해주세요.`
+        confirmType.value = 'danger'
+        isConfirmPopupVisible.value = true
+        return
+    }
+
+    try {
+        await axios.post(
+            getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_CREATE),
+            {
+                folderName: folderName,
+                parentFolderId: Number(currentFolder.value.id) || 0
+            },
+            {
+                headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
+                timeout: API_CONFIG.TIMEOUT
+            }
+        )
+
         await getFolderData(currentFolder.value.id)
 
-        confirmMsg.value = `폴더 "${folderName}"이(가) 생성되었습니다.`
         confirmTitle.value = '폴더 생성 성공'
+        confirmMsg.value = `폴더 "${folderName}"이(가) 생성되었습니다.`
+        confirmType.value = 'success'
         isConfirmPopupVisible.value = true
-    }).catch(error => {
+    } catch (error: any) {
         console.error('폴더 생성 실패:', error)
-        confirmMsg.value = `폴더 생성에 실패했습니다: ${error.message}`
         confirmTitle.value = '폴더 생성 실패'
+        confirmMsg.value = `폴더 생성에 실패했습니다: ${error.message}`
+        confirmType.value = 'danger'
         isConfirmPopupVisible.value = true
-    })
-    closeFolderCreatePopup()
+    }
 }
 
 /**
