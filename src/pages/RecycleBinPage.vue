@@ -344,6 +344,10 @@ const contextMenuX = ref(0)
 const contextMenuY = ref(0)
 const contextMenuTarget = ref<FileData | FolderData | null>(null)
 
+// 중복 확인 후 복원 대기 중인 항목
+const pendingRestoreItem = ref<FileData | FolderData | null>(null)
+const pendingBulkRestore = ref(false)
+
 /**
  * 파일 크기를 KB, MB, GB 단위로 변환합니다.
  */
@@ -498,78 +502,84 @@ const handleEmptyRecycleBin = async () => {
 }
 
 /**
- * 복원 처리 - API 호출 함수 껍데기
+ * 복원 API 호출 (파일/폴더 공통)
+ */
+const restoreItem = async (item: FileData | FolderData) => {
+    const isFolder = item.type === 'folder'
+    const itemName = isFolder ? (item as FolderData).folderName : (item as FileData).originalFileName
+    const restoreEndpoint = isFolder
+        ? API_CONFIG.ENDPOINTS.API_FOLDER_RESTORE
+        : API_CONFIG.ENDPOINTS.API_FILES_RESTORE
+
+    const res = await axios.post(
+        getApiUrl(restoreEndpoint),
+        { objectIds: [item.id.toString()] },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` } }
+    )
+
+    if (res.data.status === 'Success') {
+        confirmTitle.value = '복원 완료'
+        confirmMsg.value = `"${itemName}"이(가) 복원되었습니다.`
+        confirmType.value = 'success'
+    } else {
+        confirmTitle.value = '복원 실패'
+        confirmMsg.value = res.data.message || '복원 중 오류가 발생했습니다.'
+        confirmType.value = 'danger'
+    }
+    showCancelButton.value = false
+    isConfirmPopupVisible.value = true
+
+    await getRecycleBinFiles()
+}
+
+/**
+ * 복원 처리 - 중복 체크 후 복원
  */
 const handleRestore = async (item: FileData | FolderData) => {
-    // TODO : 중복 파일명 체크 후 confirm 후 복원 or 취소
-    const itemName = item.type === "folder" ? (item as FolderData).folderName : (item as FileData).originalFileName
-    await axios.get(
-        getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_GETISDUPLICATEDFILENAME),
-        {
-            headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
-            timeout: API_CONFIG.TIMEOUT,
-            params: {
-                type: item.type === "folder" ? "folder" : "file",
-                itemId: item.id.toString()
+    const isFolder = item.type === 'folder'
+    const itemName = isFolder ? (item as FolderData).folderName : (item as FileData).originalFileName
+    const duplicateEndpoint = isFolder
+        ? API_CONFIG.ENDPOINTS.API_FOLDER_GETISDUPLICATEDFOLDERNAME
+        : API_CONFIG.ENDPOINTS.API_FILES_GETISDUPLICATEDFILENAME
+
+    try {
+        const res = await axios.get(
+            getApiUrl(duplicateEndpoint),
+            {
+                headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
+                timeout: API_CONFIG.TIMEOUT,
+                params: { objectIds: [item.id.toString()] }
             }
+        )
+
+        if (res.data.status !== 'Success') {
+            confirmTitle.value = '중복 확인 실패'
+            confirmMsg.value = res.data.message || '중복 확인 중 오류가 발생했습니다.'
+            confirmType.value = 'danger'
+            showCancelButton.value = false
+            isConfirmPopupVisible.value = true
+            return
         }
-    ).then(async res => {
+
         if (res.data.data) {
+            // 중복 존재 → 덮어쓰기 확인
+            pendingRestoreItem.value = item
             confirmTitle.value = '파일/폴더명 중복'
-            confirmMsg.value = `"${itemName}"과(와) 동일한 이름의 파일/폴더가 이미 존재합니다. 덮어쓰시겠습니까? (복원 시 복원할 파일의 이전 version은 영구삭제 됩니다.)`
+            confirmMsg.value = `"${itemName}"과(와) 동일한 이름의 ${isFolder ? '폴더' : '파일'}가 이미 존재합니다. 덮어쓰시겠습니까? (복원 시 기존 항목은 영구삭제 됩니다.)`
             confirmType.value = 'warning'
             showCancelButton.value = true
             isConfirmPopupVisible.value = true
-            // await axios.post(
-            //     getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_RESTORE),
-            //     {
-            //         objectIds: item.id.toString()
-            //     },
-            //     {
-            //         headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` }
-            //     }
-            // ).then(res => {
-            //     if (res.data.status == 'Success') {
-            //         confirmTitle.value = '복원 완료'
-            //         confirmMsg.value = `"${itemName}"이(가) 복원되었습니다.`
-            //         confirmType.value = 'success'
-            //         showCancelButton.value = false
-            //         isConfirmPopupVisible.value = true
-            //     }
-            // })
         } else {
-            if (res.data.status == 'Success') {
-                await axios.post(
-                    getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_RESTORE),
-                    {
-                        objectIds: item.id.toString()
-                    },
-                    {
-                        headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` }
-                    }
-                ).then(res => {
-                    if (res.data.status == 'Success') {
-                        confirmTitle.value = '복원 완료'
-                        confirmMsg.value = `"${itemName}"이(가) 복원되었습니다.`
-                        confirmType.value = 'success'
-                        showCancelButton.value = false
-                        isConfirmPopupVisible.value = true
-                    }
-                })
-            } else {
-                confirmTitle.value = '복원 실패'
-                confirmMsg.value = res.data.message || '파일 복원 중 오류가 발생했습니다.'
-                confirmType.value = 'danger'
-                showCancelButton.value = false
-                isConfirmPopupVisible.value = true
-                throw new Error('복원 실패')
-            }
-
+            // 중복 없음 → 바로 복원
+            await restoreItem(item)
         }
-    })
-
-    // 목록 갱신
-    await getRecycleBinFiles()
+    } catch {
+        confirmTitle.value = '복원 실패'
+        confirmMsg.value = '복원 중 오류가 발생했습니다.'
+        confirmType.value = 'danger'
+        showCancelButton.value = false
+        isConfirmPopupVisible.value = true
+    }
 }
 
 /**
@@ -606,31 +616,107 @@ const handlePermanentDelete = async (item: FileData | FolderData) => {
 /**
  * 일괄 복원 처리 - API 호출 함수 껍데기
  */
-const handleBulkRestore = async () => {
-    const totalSelected = selectedFiles.value.size + selectedFolders.value.size
-    console.log('일괄 복원:', {
-        files: Array.from(selectedFiles.value),
-        folders: Array.from(selectedFolders.value)
-    })
+/**
+ * 일괄 복원 실제 실행 (중복 확인 후 호출)
+ */
+const executeBulkRestore = async () => {
+    const selectedFolderCount = selectedFolders.value.size
+    const selectedFileCount = selectedFiles.value.size
 
-    // TODO: API 호출 구현
-    // await axios.post(getApiUrl(API_CONFIG.ENDPOINTS.API_RECYCLE_BIN_RESTORE), {
-    //     fileIds: Array.from(selectedFiles.value),
-    //     folderIds: Array.from(selectedFolders.value)
-    // }, {
-    //     headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` }
-    // })
+    try {
+        const requests = []
+        if (selectedFileCount > 0) {
+            requests.push(axios.post(
+                getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_RESTORE),
+                { objectIds: Array.from(selectedFiles.value).map(String) },
+                { headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` } }
+            ))
+        }
+        if (selectedFolderCount > 0) {
+            requests.push(axios.post(
+                getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_RESTORE),
+                { objectIds: Array.from(selectedFolders.value).map(String) },
+                { headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` } }
+            ))
+        }
 
-    confirmTitle.value = '복원 완료'
-    confirmMsg.value = `선택한 ${totalSelected}개 항목이 복원되었습니다.`
-    confirmType.value = 'success'
+        const results = await Promise.all(requests)
+        const failedRes = results.find(res => res.data.status !== 'Success')
+
+        if (failedRes) {
+            confirmTitle.value = '복원 실패'
+            confirmMsg.value = failedRes.data.message || '복원 중 오류가 발생했습니다.'
+            confirmType.value = 'danger'
+        } else {
+            confirmTitle.value = '복원 완료'
+            confirmMsg.value = `선택한 ${selectedFolderCount}개의 폴더와 ${selectedFileCount}개의 파일이 복원되었습니다.`
+            confirmType.value = 'success'
+            selectedFiles.value.clear()
+            selectedFolders.value.clear()
+        }
+    } catch {
+        confirmTitle.value = '복원 실패'
+        confirmMsg.value = '복원 중 오류가 발생했습니다.'
+        confirmType.value = 'danger'
+    }
     showCancelButton.value = false
     isConfirmPopupVisible.value = true
-
-    selectedFiles.value.clear()
-    selectedFolders.value.clear()
-    // 목록 갱신
     await getRecycleBinFiles()
+}
+
+/**
+ * 일괄 복원 처리 - 중복 체크 후 복원
+ */
+const handleBulkRestore = async () => {
+    const fileIds = Array.from(selectedFiles.value).map(String)
+    const folderIds = Array.from(selectedFolders.value).map(String)
+
+    try {
+        const checks = await Promise.all([
+            fileIds.length > 0
+                ? axios.get(getApiUrl(API_CONFIG.ENDPOINTS.API_FILES_GETISDUPLICATEDFILENAME), {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
+                    timeout: API_CONFIG.TIMEOUT,
+                    params: { objectIds: fileIds }
+                })
+                : Promise.resolve({ data: { status: 'Success', data: false } }),
+            folderIds.length > 0
+                ? axios.get(getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_GETISDUPLICATEDFOLDERNAME), {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
+                    timeout: API_CONFIG.TIMEOUT,
+                    params: { objectIds: folderIds }
+                })
+                : Promise.resolve({ data: { status: 'Success', data: false } })
+        ])
+
+        const failedCheck = checks.find(res => res.data.status !== 'Success')
+        if (failedCheck) {
+            confirmTitle.value = '중복 확인 실패'
+            confirmMsg.value = failedCheck.data.message || '중복 확인 중 오류가 발생했습니다.'
+            confirmType.value = 'danger'
+            showCancelButton.value = false
+            isConfirmPopupVisible.value = true
+            return
+        }
+
+        const hasDuplicate = checks.some(res => res.data.data === true)
+        if (hasDuplicate) {
+            pendingBulkRestore.value = true
+            confirmTitle.value = '파일/폴더명 중복'
+            confirmMsg.value = '선택한 항목 중 동일한 이름의 파일/폴더가 이미 존재합니다. 덮어쓰시겠습니까? (기존 항목은 영구삭제 됩니다.)'
+            confirmType.value = 'warning'
+            showCancelButton.value = true
+            isConfirmPopupVisible.value = true
+        } else {
+            await executeBulkRestore()
+        }
+    } catch {
+        confirmTitle.value = '복원 실패'
+        confirmMsg.value = '복원 중 오류가 발생했습니다.'
+        confirmType.value = 'danger'
+        showCancelButton.value = false
+        isConfirmPopupVisible.value = true
+    }
 }
 
 /**
@@ -687,14 +773,22 @@ const handleBulkPermanentDelete = async () => {
     await getRecycleBinFiles()
 }
 
-const handleConfirm = () => {
-    console.log('확인됨')
+const handleConfirm = async () => {
     isConfirmPopupVisible.value = false
+    if (pendingRestoreItem.value) {
+        const item = pendingRestoreItem.value
+        pendingRestoreItem.value = null
+        await restoreItem(item)
+    } else if (pendingBulkRestore.value) {
+        pendingBulkRestore.value = false
+        await executeBulkRestore()
+    }
 }
 
 const handleCancel = () => {
-    console.log('취소됨')
     isConfirmPopupVisible.value = false
+    pendingRestoreItem.value = null
+    pendingBulkRestore.value = false
 }
 
 const openUploadPopup = () => {

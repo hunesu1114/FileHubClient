@@ -169,7 +169,7 @@ const folderTree = ref<FolderItem>({
 
 const getFolderTree = async () => {
     await axios.get(
-        getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDERS_GETTREE),
+        getApiUrl(API_CONFIG.ENDPOINTS.API_FOLDER_GETTREE),
         {
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('jwt') || ''}`
